@@ -18,9 +18,9 @@ jobs:
       run: |
         sudo apt-get install -y gpg libjemalloc-dev
 
-    - uses: swift-actions/setup-swift@v3
-      with:
-        swift-version: "6"
+#    - uses: swift-actions/setup-swift@v3
+#      with:
+#        swift-version: "6"
 
     - name: Swift version
       run: swift --version
