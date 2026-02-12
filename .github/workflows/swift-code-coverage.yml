@@ -16,7 +16,7 @@ jobs:
     - name: Ubuntu deps
       if: ${{ runner.os == 'Linux' }}
       run: |
-        sudo apt-get install -y libjemalloc-dev
+        sudo apt-get install -y gpg libjemalloc-dev
 
     - uses: swift-actions/setup-swift@v3
       with:
