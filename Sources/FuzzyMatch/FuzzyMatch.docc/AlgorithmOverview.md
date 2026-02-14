@@ -72,7 +72,7 @@ If the candidate is shorter than `queryLength - effectiveMaxEditDistance`, it wo
 
 ### Stage 2: Character Bitmask — O(1)
 
-A 37-bit bloom filter tracks character presence (a-z, 0-9, underscore). The number of distinct missing character types must be within an adaptive tolerance:
+A 64-bit bitmask tracks character presence (a-z, 0-9, underscore, plus 2-byte UTF-8 characters hashed into the upper bits). The number of distinct missing character types must be within an adaptive tolerance:
 
 ```
 missingChars = queryMask & ~candidateMask
