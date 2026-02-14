@@ -325,9 +325,16 @@ let benchmarks: @Sendable () -> Void = {
         metrics: metrics, warmupIterations: 1, scalingFactor: .one
     )
 
+    let concurrentThreshold: BenchmarkThresholds = .init(relative: [.p25: 15.0, .p50: 15.0, .p75: 15.0])
     let configOneConcurrent = Benchmark.Configuration(
         metrics: metrics, warmupIterations: 1, scalingFactor: .one,
-        thresholds: [.instructions: .init(relative: [.p25: 15.0, .p50: 15.0, .p75: 15.0])]
+        thresholds: [
+            .instructions: concurrentThreshold,
+            .mallocCountTotal: concurrentThreshold,
+            .objectAllocCount: concurrentThreshold,
+            .retainCount: concurrentThreshold,
+            .releaseCount: concurrentThreshold
+        ]
     )
 
     // MARK: - Query Preparation Benchmark
