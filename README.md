@@ -303,7 +303,7 @@ FuzzyMatch (SW) agrees with nucleo on 92% of top-1 rankings (182/197), making it
 FuzzyMatcher uses a three-stage prefiltering pipeline to quickly reject non-matching candidates before computing expensive edit distance:
 
 1. **Length Bounds** - Rejects candidates that are too short (no upper limit to support subsequence matching)
-2. **Character Bitmask** - 64-bit bloom filter checks that the number of distinct missing character types is within an adaptive tolerance (`popcount(queryMask & ~candidateMask) <= bitmaskTolerance`). The tolerance is strict (0) for very short queries and equals `effectiveMaxEditDistance` for longer ones, allowing substitution typos while still quickly rejecting candidates that are too different.
+2. **Character Bitmask** - 64-bit bloom filter checks that the number of distinct missing character types is within an adaptive tolerance (`popcount(queryMask & ~candidateMask) <= bitmaskTolerance`). The tolerance is strict (0) for very short queries (≤3 chars) — blocking substitution typos but still allowing transpositions (same character set) — and equals `effectiveMaxEditDistance` for longer ones, allowing substitution typos while still quickly rejecting candidates that are too different.
 3. **Trigrams** - Verifies shared 3-character sequences
 
 ### Benchmarks
