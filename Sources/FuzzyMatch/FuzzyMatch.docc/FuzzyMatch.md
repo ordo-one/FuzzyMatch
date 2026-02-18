@@ -77,4 +77,5 @@ for candidate in candidates {
 
 - ``ScoredMatch``
 - ``MatchResult``
+- ``ItemMatchResult``
 - ``MatchKind``
