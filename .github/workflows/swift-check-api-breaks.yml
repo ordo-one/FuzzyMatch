@@ -5,32 +5,26 @@ on:
   pull_request:
     types: [opened, synchronize]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   analyze-api-breakage:
-
-    runs-on: [ubuntu-latest]
+    runs-on: [swift-stable, ubuntu-latest, X64, self-hosted]
     timeout-minutes: 30
+    if: ${{ !startsWith(github.repository, 'ordo-one/plugin-') && !startsWith(github.repository, 'ordo-one/prototype-plugin-') && !startsWith(github.repository, 'ordo-one/prototype-app-') }}
  
     steps:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
-    - name: Ubuntu deps
-      if: ${{ runner.os == 'Linux' }}
-      run: |
-        sudo apt-get install -y libjemalloc-dev
-    - name: Extract default SPM library target
-      id: spm_target
-      run: |
-        SPM_DEFAULT_TARGET=$(swift package dump-package | jq -r '.products | .[] | select(.type | has("library")) | .name' | head -1)
-        echo "spmlibrarytarget=${SPM_DEFAULT_TARGET}" >> $GITHUB_ENV
+    - name: Git credential setup
+      uses: ./.github/actions/credentials-setup
+      with:
+        token: ${{ secrets.CI_MACHINE_PAT }}
+        ordo-auth-token: ${{ secrets.ORDO_AUTH_TOKEN }}
     - name: Build
-      if: ${{ env.spmlibrarytarget }}
       run: swift build
-    - name: Analyze API breakage ((workaround compile issue on first run)
-      if: ${{ env.spmlibrarytarget }}
-      continue-on-error: true
-      run: swift package diagnose-api-breaking-changes origin/main --targets ${{ env.spmlibrarytarget }}
     - name: Analyze API breakage
-      if: ${{ env.spmlibrarytarget }}
-      run: swift package diagnose-api-breaking-changes origin/main --targets ${{ env.spmlibrarytarget }}
+      run: swift package diagnose-api-breaking-changes origin/main

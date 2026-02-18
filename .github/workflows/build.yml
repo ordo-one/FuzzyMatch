@@ -1,0 +1,48 @@
+name: Build
+
+on:
+  pull_request:
+    branches: [ main, next, 'release/**' ]
+  schedule:
+    - cron: '15 0 * * *'
+  workflow_dispatch:
+    inputs:
+      run_nightly:
+        description: 'Run nightly/beta builds'
+        type: boolean
+        default: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    name: Linux
+    uses: ordo-one/internal-repository-templates/.github/workflows/build-linux.yml@main
+    secrets:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      CI_MACHINE_PAT: ${{ secrets.CI_MACHINE_PAT }}
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      ORDO_AUTH_TOKEN: ${{ secrets.ORDO_AUTH_TOKEN }}
+
+  macos:
+    name: macOS
+    uses: ordo-one/internal-repository-templates/.github/workflows/build-macos.yml@main
+    secrets:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      CI_MACHINE_PAT: ${{ secrets.CI_MACHINE_PAT }}
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      ORDO_AUTH_TOKEN: ${{ secrets.ORDO_AUTH_TOKEN }}
+
+  nightly:
+    name: Nightly
+    if: ${{ github.event_name == 'schedule' || inputs.run_nightly }}
+    uses: ordo-one/internal-repository-templates/.github/workflows/build-nightly.yml@main
+    with:
+      trigger_source: ${{ github.event_name }}
+    secrets:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      CI_MACHINE_PAT: ${{ secrets.CI_MACHINE_PAT }}
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      ORDO_AUTH_TOKEN: ${{ secrets.ORDO_AUTH_TOKEN }}

@@ -1,34 +1,55 @@
-name: Swift code coverage
+name: Swift test code coverage
 
 on:
+  schedule:
+   - cron: '15 1 * * *'
   workflow_dispatch:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main, next ]
+#  push:
+#    branches: [ main ]
+#    paths:
+#      - '**.swift'
+#      - 'Package.resolved'
+#      - '**.c'
+#      - '**.h'
+#  pull_request:
+#    branches: [ main ]
+#    paths:
+#      - '**.swift'
+#      - 'Package.resolved'
+#      - '**.c'
+#      - '**.h'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test-code-coverage:
-    runs-on: ubuntu-latest
-    container:
-      image: swift:latest
+    runs-on: [swift-stable, ubuntu-latest, X64, self-hosted]
     timeout-minutes: 60
     steps:
     - uses: actions/checkout@v4
+    - name: Git credential setup
+      uses: ./.github/actions/credentials-setup
+      with:
+        token: ${{ secrets.CI_MACHINE_PAT }}
+        ordo-auth-token: ${{ secrets.ORDO_AUTH_TOKEN }}
 
-    - name: Install deps
-      run: |
-        apt-get update -q && apt-get install -y -q libjemalloc-dev curl
-
-    - name: Swift version
-      run: swift --version
-
-    - name: Start consul
-      uses: ./.github/actions/consul-start
+    - name: Start Redpanda
+      uses: ./.github/actions/redpanda-start
 
     - name: Run tests
+      env:
+        ENABLE_PARALLEL_TESTS: ${{ vars.ENABLE_PARALLEL_TESTS }}
       continue-on-error: true
       run: |
-        [ -d Tests ] && swift test --parallel --enable-code-coverage
+        if [ -d Tests ]; then
+           if [ "${ENABLE_PARALLEL_TESTS}" = "1" ]; then
+            swift test --enable-code-coverage --parallel
+          else
+            swift test --enable-code-coverage
+          fi
+        fi
 
     - name: Export code coverage
       run: |
@@ -42,9 +63,14 @@ jobs:
              llvm-cov export -format="lcov" ${xctest_binary} -instr-profile .build/debug/codecov/default.profdata > info.lcov
          fi
 
+    - name: Stop Redpanda
+      if: ${{ env.REDPANDA_BROKERS != '' }}
+      run: |
+        sudo -u redpanda rpk redpanda stop
+
     - name: Upload codecov
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v4
       with: 
-        token: ${{ secrets.CODECOV_REPO_TOKEN }}
+        token: ${{ secrets.CODECOV_REPO_TOKEN }} 
         files: info.lcov
         fail_ci_if_error: true

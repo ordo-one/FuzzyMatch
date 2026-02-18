@@ -1,39 +1,58 @@
 name: Thread sanitizer
 
 on:
+  schedule:
+   - cron: '15 1 * * *'
   workflow_dispatch:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main, next ]
+#  push:
+#    branches: [ main ]
+#    paths:
+#      - '**.swift'
+#      - 'Package.resolved'
+#      - '**.c'
+#      - '**.h'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   thread-sanitizer:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
+        os:
+          - [swift-stable, ubuntu-latest, X64, self-hosted]
+          - [macos-26, low-priority, self-hosted]
 
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     steps:
-    - name: Homebrew Mac
+    - uses: swift-actions/setup-swift@v2
+      #if: ${{ runner.os == 'Macos' }}
+      if: ${{ false }}
+      with:
+        swift-version: '5.9'
+    - name: Wipe gitconfig
       if: ${{ runner.os == 'Macos' }}
-      run: |
-        echo "/opt/homebrew/bin:/usr/local/bin" >> $GITHUB_PATH
-        echo BENCHMARK_DISABLE_JEMALLOC=true >> $GITHUB_ENV
-        brew install jemalloc
+      run: echo "" > ~/.gitconfig
+    - uses: actions/checkout@v4
+    # Needed otherwise xcode git hangs on checkout
+    - name: Git credential setup
+      uses: ./.github/actions/credentials-setup
+      with:
+        token: ${{ secrets.CI_MACHINE_PAT }}
+        ordo-auth-token: ${{ secrets.ORDO_AUTH_TOKEN }}
 
-    - name: Ubuntu deps
+    - name: Disable jemalloc tsan on Linux
       if: ${{ runner.os == 'Linux' }}
       run: |
-        sudo apt-get install -y libjemalloc-dev
         echo BENCHMARK_DISABLE_JEMALLOC=true >> $GITHUB_ENV
 
-    - uses: actions/checkout@v4
 
-    - name: Start consul
-      uses: ./.github/actions/consul-start
+
+    - name: Git URL token override
+      run: git config --global url."https://ordo-ci:${{ secrets.CI_MACHINE_PAT }}@github.com".insteadOf "https://github.com"
 
     - name: Swift version
       run: swift --version
@@ -41,6 +60,13 @@ jobs:
     # Required to clean build directory before sanitizer!
     - name: Clean before debug build thread sanitizier
       run: swift package clean
+
+    - name: Build thread sanitizer
+      run: swift build --sanitize=thread
+
+    - name: Start Redpanda
+      if: ${{ join(matrix.os, ' ') == 'swift-stable ubuntu-latest X64 self-hosted' }}
+      uses: ./.github/actions/redpanda-start
 
     - name: Run thread sanitizer
       run: swift test --sanitize=thread
@@ -50,3 +76,12 @@ jobs:
       
     - name: Run thread sanitizer on release build
       run: swift test --sanitize=thread -c release -Xswiftc -enable-testing
+
+    - name: Stop Redpanda
+      if: ${{ env.REDPANDA_BROKERS != '' }}
+      run: |
+        sudo -u redpanda rpk redpanda stop
+
+    - name: Wipe gitconfig Mac
+      if: ${{ runner.os == 'Macos' }}
+      run: echo "" > ~/.gitconfig

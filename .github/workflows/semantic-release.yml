@@ -3,17 +3,21 @@ name: Semantic Release
 on:
   workflow_dispatch:
   push:
-    branches: [ main, next ]
+    branches: [ main, next, 'release/**' ]
 
 jobs:
   semantic-release:
-    runs-on: ubuntu-22.04
+    runs-on: [swift-stable, ubuntu-latest, X64, self-hosted]
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ secrets.CI_MACHINE_PAT }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Semantic Release Config
+        id: semantic-config
         run: |
           echo "
           branches:
@@ -47,20 +51,147 @@ jobs:
                 - scope: 'major'
                   release: major
             - - '@semantic-release/release-notes-generator'
+            - - '@semantic-release/exec'
+              -  successCmd: '{ echo release_type=\${nextRelease.type}; echo version=\${nextRelease.version}; } >> \$GITHUB_OUTPUT'
             - - '@semantic-release/github'
               - successComment: false
-                failTitle: false" > .releaserc.yml
+                failTitle: false
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+          generateNotes:
+            - path: '@semantic-release/release-notes-generator'
+              writerOpts:
+                groupBy: 'type'
+                commitGroupsSort: 'title'
+                commitsSort: 'header'
+              linkCompare: true
+              linkReferences: true
+              presetConfig:
+                types:
+                  - type: 'milestone'
+                    section: '✨ Milestone'
+                    hidden: false
+                  - type: 'breaking'
+                    section: '🧨 Breaking changes!'
+                    hidden: false
+                  - type: 'build'
+                    section: '🦊 CI/CD'
+                    hidden: false
+                  - type: 'chore'
+                    section: '📦 Other'
+                    hidden: false
+                  - type: 'ci'
+                    section: '🦊 CI/CD'
+                    hidden: false
+                  - type: 'docs'
+                    section: '📔 Docs'
+                    hidden: false
+                  - type: 'feat'
+                    section: '🚀 Features'
+                    hidden: false
+                  - type: 'fix'
+                    section: '🛠 Fixes'
+                    hidden: false
+                  - type: 'perf'
+                    section: '⏩ Performance'
+                    hidden: false
+                  - type: 'refactor'
+                    section: ':scissors: Refactor'
+                    hidden: false
+                  - type: 'revert'
+                    section: '👀 Reverts'
+                    hidden: false
+                  - type: 'style'
+                    section: '💈 Style'
+                    hidden: false
+                  - type: 'test'
+                    section: '🧪 Tests'
+                    hidden: false" > .releaserc.yml
 
-      - name: Install semantic-release
+      - name: Configure maintenance release
+        if: startsWith(github.ref_name, 'release/')
         run: |
-          npm install semantic-release@v24 conventional-changelog-conventionalcommits@v8 -D
-          npm list
+          BRANCH=${GITHUB_REF_NAME#release/}
+          if [[ $BRANCH =~ [a-zA-Z] ]]; then
+            MAJOR_VERSION=$(git describe --tags | awk -F "-" '{print $1}' | cut -d. -f1)
+            VERSION="${MAJOR_VERSION}.x.x"
+          else
+            VERSION=$BRANCH
+          fi
+
+          yq -y --in-place '.branches = ["main", {"name": "'release/$BRANCH'", "range": "'$VERSION'", "channel": "'$VERSION'"}, {"name": "next", "prerelease": true}]' .releaserc.yml
+          grep -A 10 branches: .releaserc.yml
+
+          LATEST_RELEASE=$(gh release list --exclude-drafts --exclude-pre-releases --json tagName,isLatest --jq '.[] | select(.isLatest == true) | .tagName')
+          echo "LATEST_RELEASE=$LATEST_RELEASE" >> $GITHUB_ENV
+
       - name: Release
+        id: semantic
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx semantic-release
+
+      - name: Restore latest release
+        if: ${{ startsWith(github.ref_name, 'release/') && steps.semantic.outputs.version != '' }}
+        run: |
+          gh release edit ${{ env.LATEST_RELEASE }} --latest
+
+      - name: Plugin build trigger
+        if: >
+          ${{ steps.semantic.outputs.version != '' && (
+                startsWith(github.repository, 'ordo-one/plugin-') ||
+                startsWith(github.repository, 'ordo-one/prototype-plugin-') ||
+                startsWith(github.repository, 'ordo-one/test-plugin-')
+              ) }}
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.CI_MACHINE_PAT }}
+          event-type: build_plugin
+          client-payload: >
+            {
+              "commit_msg": "${{ env.commit_msg }}",
+              "shortcut_case": "${{ env.shortcut_case }}",
+              "version": "${{ steps.semantic.outputs.version }}",
+              "release_type": "${{ steps.semantic.outputs.release_type }}",
+              "ref": "${{ github.ref }}",
+              "sha": "${{ github.sha }}",
+              "repository": "${{ github.repository }}",
+              "actor": "${{ github.actor }}"
+            }
+
+      - name: Release package trigger conf
+        if: ${{ steps.semantic.outputs.version != '' && vars.BUILD_RELEASE_REPO != '' }}
+        env:
+          commit_msg: ${{ github.event.head_commit.message }}
+        run: |
+          echo "TRIGGER_REPO=${{ vars.BUILD_RELEASE_REPO }}" >> "$GITHUB_ENV"
+          export TRIGGER_REPO=${{ vars.BUILD_RELEASE_REPO }}
+          echo "version: ${{ steps.semantic.outputs.version }}"
+          echo "${commit_msg}" > commit_msg
+
+          echo "commit_msg=$(cat commit_msg | head -n 1 | tr -cd '[:alnum:][:space:]._()[]:-' )" >> $GITHUB_ENV
+          echo "shortcut_case=$(cat commit_msg | grep -oE '\[sc-([0-9]+)\]' | sed -nE 's/.*\[sc-([0-9]+)\].*/sc-\1/p' | head -n 1)" >> $GITHUB_ENV
+
+          if [ -n "${TRIGGER_REPO}" ] && [ "${{ github.actor }}" != "ordo-cli" ]; then
+            echo "* Triggering build_release under ${{ github.server_url }}/ordo-one/${TRIGGER_REPO}/actions" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Release package build trigger
+        if: ${{  env.TRIGGER_REPO }}
+        #if: ${{ steps.semantic.outputs.version != '' && vars.SPM_UPDATE_REPO == '' && github.actor != 'ordo-ci' && (!startsWith(github.repository, 'ordo-one/plugin-') && !startsWith(github.repository, 'ordo-one/prototype-plugin-') && !startsWith(github.repository, 'ordo-one/example-')) }}
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.CI_MACHINE_PAT }}
+          repository: ordo-one/${{ env.TRIGGER_REPO }}
+          event-type: build_release
+          client-payload: >
+            {
+              "commit_msg": "${{ env.commit_msg }}",
+              "shortcut_case": "${{ env.shortcut_case }}",
+              "version": "${{ steps.semantic.outputs.version }}",
+              "release_type": "${{ steps.semantic.outputs.release_type }}",
+              "ref": "${{ github.ref }}",
+              "sha": "${{ github.sha }}",
+              "repository": "${{ github.repository }}",
+              "actor": "${{ github.actor }}"
+            }
+

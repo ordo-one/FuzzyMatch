@@ -1,0 +1,16 @@
+name: Soundness
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+jobs:
+  lint-swift:
+    name: Lint
+    uses: ordo-one/internal-repository-templates/.github/workflows/soundness-swiftlint.yml@main
+    secrets: inherit
+    
+  lint-pr:
+    name: PR
+    uses: ordo-one/internal-repository-templates/.github/workflows/soundness-pr.yml@main
+    secrets: inherit

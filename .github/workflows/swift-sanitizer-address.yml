@@ -1,38 +1,48 @@
 name: Address sanitizer
 
 on:
+  schedule:
+   - cron: '15 1 * * *'
   workflow_dispatch:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main, next ]
+#  push:
+#    branches: [ main ]
+#    paths:
+#      - '**.swift'
+#      - 'Package.resolved'
+#      - '**.c'
+#      - '**.h'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   address-sanitizer:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-26]
+        os:
+          - [swift-stable, ubuntu-latest, X64, self-hosted]
+          - [macos-26, low-priority, self-hosted]
 
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     steps:
-    - name: Homebrew Mac
+    - uses: swift-actions/setup-swift@v2
+      #if: ${{ runner.os == 'Macos' }}
+      if: ${{ false }}
+      with:
+        swift-version: '5.9'
+    - name: Wipe gitconfig
       if: ${{ runner.os == 'Macos' }}
-      run: |
-        echo "/opt/homebrew/bin:/usr/local/bin" >> $GITHUB_PATH
-        echo BENCHMARK_DISABLE_JEMALLOC=true >> $GITHUB_ENV
-        brew install jemalloc
-
-    - name: Ubuntu deps
-      if: ${{ runner.os == 'Linux' }}
-      run: |
-        sudo apt-get install -y libjemalloc-dev
-
+      run: echo "" > ~/.gitconfig
     - uses: actions/checkout@v4
 
-    - name: Start consul
-      uses: ./.github/actions/consul-start
+    - name: Git credential setup
+      uses: ./.github/actions/credentials-setup
+      with:
+        token: ${{ secrets.CI_MACHINE_PAT }}
+        ordo-auth-token: ${{ secrets.ORDO_AUTH_TOKEN }}
 
     - name: Swift version
       run: swift --version
@@ -41,11 +51,32 @@ jobs:
     - name: Clean before debug build sanitizier
       run: swift package clean
 
+    - name: Build with address sanitizer
+      run: swift build --sanitize=address
+
+    - name: Start Redpanda
+      if: ${{ join(matrix.os, ' ') == 'swift-stable ubuntu-latest X64 self-hosted' }}
+      uses: ./.github/actions/redpanda-start
+
     - name: Run address sanitizer
+      env:
+        REDPANDA_BROKERS: ${{ env.REDPANDA_BROKERS }}
+      if: ${{ runner.os == 'Macos' }}
       run: swift test --sanitize=address
       
     - name: Clean before release build sanitizier
+      if: ${{ runner.os == 'Macos' }}
       run: swift package clean
       
     - name: Run address sanitizer on release build
+      if: ${{ runner.os == 'Macos' }}
       run: swift test --sanitize=address -c release -Xswiftc -enable-testing
+
+    - name: Wipe gitconfig Mac
+      if: ${{ runner.os == 'Macos' }}
+      run: echo "" > ~/.gitconfig
+
+    - name: Stop Redpanda
+      if: ${{ env.REDPANDA_BROKERS != '' }}
+      run: |
+        sudo -u redpanda rpk redpanda stop
