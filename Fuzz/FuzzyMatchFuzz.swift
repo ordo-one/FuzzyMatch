@@ -1,4 +1,4 @@
-//===----------------------------------------------------------------------===//
+// ===----------------------------------------------------------------------===//
 //
 // This source file is part of the FuzzyMatch open source project
 //
@@ -9,7 +9,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 //
-//===----------------------------------------------------------------------===//
+// ===----------------------------------------------------------------------===//
 
 // Fuzz target for FuzzyMatcher using libFuzzer.
 //
@@ -63,7 +63,11 @@ private let configs: [MatchConfig] = [
     MatchConfig(minScore: 0.0, algorithm: .editDistance(EditDistanceConfig(maxEditDistance: 0))), // ED: exact only
     MatchConfig(minScore: 0.5, algorithm: .editDistance(EditDistanceConfig(maxEditDistance: 1))), // ED: strict
     MatchConfig(minScore: 0.0, algorithm: .editDistance(EditDistanceConfig(maxEditDistance: 3))), // ED: lenient
-    MatchConfig(minScore: 0.0, algorithm: .editDistance(EditDistanceConfig(maxEditDistance: 2, prefixWeight: 4.0, substringWeight: 0.5))), // ED: picker-style
+    // ED: picker-style
+    MatchConfig(
+        minScore: 0.0,
+        algorithm: .editDistance(EditDistanceConfig(maxEditDistance: 2, prefixWeight: 4.0, substringWeight: 0.5))
+    ),
 
     // Smith-Waterman configs (indices 5-9)
     .smithWaterman,                                                       // SW: default
@@ -122,11 +126,11 @@ public func fuzzTest(_ start: UnsafeRawPointer, _ count: Int) -> CInt {
 
     // ── INVARIANT 5: Buffer reuse consistency ──
     let result2 = matcher.score(candidate, against: prepared, buffer: &buffer)
-    if let r1 = result, let r2 = result2 {
-        precondition(r1.score == r2.score,
-                     "Buffer reuse: \(r1.score) != \(r2.score)")
-        precondition(r1.kind == r2.kind,
-                     "Buffer reuse: \(r1.kind) != \(r2.kind)")
+    if let res1 = result, let res2 = result2 {
+        precondition(res1.score == res2.score,
+                     "Buffer reuse: \(res1.score) != \(res2.score)")
+        precondition(res1.kind == res2.kind,
+                     "Buffer reuse: \(res1.kind) != \(res2.kind)")
     } else {
         precondition((result == nil) == (result2 == nil),
                      "Buffer reuse: nil mismatch")

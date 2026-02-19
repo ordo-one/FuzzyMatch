@@ -61,8 +61,8 @@ if let idx = CommandLine.arguments.firstIndex(of: "--queries"), idx + 1 < Comman
 // Default to 1 iteration — Ifrit is too slow for multiple iterations
 let iterationsArg: Int
 if let idx = CommandLine.arguments.firstIndex(of: "--iterations"), idx + 1 < CommandLine.arguments.count,
-   let n = Int(CommandLine.arguments[idx + 1]), n > 0 {
-    iterationsArg = n
+   let count = Int(CommandLine.arguments[idx + 1]), count > 0 {
+    iterationsArg = count
 } else {
     iterationsArg = 1
 }
@@ -166,14 +166,14 @@ let categories = ["exact_symbol", "exact_name", "exact_isin", "prefix",
                    "typo", "substring", "multi_word", "symbol_spaces", "abbreviation"]
     .filter { categorySet.contains($0) }
 
-func pad(_ s: String, _ width: Int, right: Bool = false) -> String {
-    if s.count >= abs(width) { return s }
-    let padding = String(repeating: " ", count: abs(width) - s.count)
-    return right ? padding + s : s + padding
+func pad(_ str: String, _ width: Int, right: Bool = false) -> String {
+    if str.count >= abs(width) { return str }
+    let padding = String(repeating: " ", count: abs(width) - str.count)
+    return right ? padding + str : str + padding
 }
 
-func fmtD(_ v: Double, _ decimals: Int) -> String {
-    String(format: "%.\(decimals)f", v)
+func fmtD(_ val: Double, _ decimals: Int) -> String {
+    String(format: "%.\(decimals)f", val)
 }
 
 print("\(pad("Category", 22)) \(pad("Queries", 8, right: true)) \(pad("Med(ms)", 8, right: true)) \(pad("Min(ms)", 8, right: true)) \(pad("Matches", 8, right: true))")
@@ -208,7 +208,7 @@ let sortedIndices = queries.indices.sorted { a, b in
 for qi in sortedIndices {
     let q = queries[qi]
     let med = queryTimingsMs[qi].sorted()[iterations / 2]
-    let mn = queryTimingsMs[qi].min()!
+    let minMs = queryTimingsMs[qi].min()!
     let displayQuery = q.text.count > 30 ? String(q.text.prefix(27)) + "..." : q.text
-    print("\(pad(displayQuery, 32)) \(pad(q.field, 8)) \(pad(q.category, 16)) \(pad(fmtD(med, 2), 8, right: true)) \(pad(fmtD(mn, 2), 8, right: true)) \(pad("\(queryMatchCounts[qi])", 8, right: true))")
+    print("\(pad(displayQuery, 32)) \(pad(q.field, 8)) \(pad(q.category, 16)) \(pad(fmtD(med, 2), 8, right: true)) \(pad(fmtD(minMs, 2), 8, right: true)) \(pad("\(queryMatchCounts[qi])", 8, right: true))")
 }

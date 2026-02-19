@@ -281,21 +281,21 @@ struct App {
         for qi in sorted {
             let q = queries[qi]
             let med = queryTimingsMs[qi].sorted()[iterations / 2]
-            let mn = queryTimingsMs[qi].min()!
+            let minMs = queryTimingsMs[qi].min()!
             let display = q.text.count > 30 ? String(q.text.prefix(27)) + "..." : q.text
-            print("\(pad(display, 32)) \(pad(q.field, 8)) \(pad(q.category, 16)) \(pad(fmtD(med, 2), 8, right: true)) \(pad(fmtD(mn, 2), 8, right: true)) \(pad("\(queryMatchCounts[qi])", 8, right: true))")
+            print("\(pad(display, 32)) \(pad(q.field, 8)) \(pad(q.category, 16)) \(pad(fmtD(med, 2), 8, right: true)) \(pad(fmtD(minMs, 2), 8, right: true)) \(pad("\(queryMatchCounts[qi])", 8, right: true))")
         }
     }
 
     // MARK: - Formatting Helpers
 
-    static func pad(_ s: String, _ width: Int, right: Bool = false) -> String {
-        if s.count >= width { return s }
-        let padding = String(repeating: " ", count: width - s.count)
-        return right ? padding + s : s + padding
+    static func pad(_ str: String, _ width: Int, right: Bool = false) -> String {
+        if str.count >= width { return str }
+        let padding = String(repeating: " ", count: width - str.count)
+        return right ? padding + str : str + padding
     }
 
-    static func fmtD(_ v: Double, _ decimals: Int) -> String {
-        String(format: "%.\(decimals)f", v)
+    static func fmtD(_ val: Double, _ decimals: Int) -> String {
+        String(format: "%.\(decimals)f", val)
     }
 }
