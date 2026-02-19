@@ -1,14 +1,14 @@
-// swift-tools-version: 5.9
+// swift-tools-version: 6.2
 
 import PackageDescription
 
 let package = Package(
     name: "FuzzyMatch",
     platforms: [
-        .macOS(.v14),
-        .iOS(.v17),
-        .visionOS(.v1),
-        .watchOS(.v10)
+        .macOS(.v26),
+        .iOS(.v26),
+        .visionOS(.v26),
+        .watchOS(.v26)
     ],
     products: [
         .library(

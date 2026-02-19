@@ -28,8 +28,17 @@ struct TinyQueryFastPathTests {
     ) -> ScoredMatch? {
         var buffer = matcher.makeBuffer()
         buffer.recordUsage(queryLength: query.lowercased.count, candidateLength: candidate.utf8.count)
+
+        #if compiler(>=6.2)
+        let candidateBytes = candidate.utf8.span
+        #else
+        var mutCandidate = candidate
+        return mutCandidate.withUTF8 { utf8Buffer in
+            let candidateBytes = Span<UInt8>(utf8Buffer)
+        #endif
+
         return matcher.scoreImpl(
-            candidate.utf8.span,
+            candidateBytes,
             against: query,
             edConfig: query.config.editDistanceConfig ?? .default,
             candidateStorage: &buffer.candidateStorage,
@@ -38,6 +47,10 @@ struct TinyQueryFastPathTests {
             alignmentState: &buffer.alignmentState,
             wordInitials: &buffer.wordInitials
         )
+
+        #if !compiler(>=6.2)
+        } // withUTF8
+        #endif
     }
 
     @Test("1-char query score matches full pipeline")

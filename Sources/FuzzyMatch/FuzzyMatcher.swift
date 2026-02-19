@@ -280,11 +280,20 @@ public struct FuzzyMatcher: Sendable {
             queryLength: query.lowercased.count,
             candidateLength: candidate.utf8.count
         )
+
+        #if compiler(>=6.2)
+        let candidateBytes = candidate.utf8.span
+        #else
+        var mutCandidate = candidate
+        return mutCandidate.withUTF8 { utf8Buffer in
+            let candidateBytes = Span<UInt8>(utf8Buffer)
+        #endif
+
         // Dispatch based on matching algorithm
         switch query.config.algorithm {
         case .smithWaterman(let swConfig):
             return scoreSmithWatermanImpl(
-                candidate.utf8.span,
+                candidateBytes,
                 against: query,
                 swConfig: swConfig,
                 candidateStorage: &buffer.candidateStorage,
@@ -298,7 +307,7 @@ public struct FuzzyMatcher: Sendable {
             let queryLength = query.lowercased.count
             if queryLength == 1 {
                 return scoreTinyQuery1(
-                    candidate.utf8.span,
+                    candidateBytes,
                     candidateLength: candidate.utf8.count,
                     q0: query.lowercased[0],
                     edConfig: edConfig,
@@ -308,7 +317,7 @@ public struct FuzzyMatcher: Sendable {
 
             // Pass components separately to avoid exclusivity conflicts with Span borrowing
             return scoreImpl(
-                candidate.utf8.span,
+                candidateBytes,
                 against: query,
                 edConfig: edConfig,
                 candidateStorage: &buffer.candidateStorage,
@@ -318,6 +327,10 @@ public struct FuzzyMatcher: Sendable {
                 wordInitials: &buffer.wordInitials
             )
         }
+
+        #if !compiler(>=6.2)
+        } // withUTF8
+        #endif
     }
 
     // MARK: - Scoring State
