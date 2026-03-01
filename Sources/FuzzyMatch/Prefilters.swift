@@ -123,13 +123,12 @@ internal func latin1ToASCII(_ lowercasedSecondByte: UInt8) -> UInt8 {
 /// - Returns: The canonical ASCII byte, or `0` if no mapping exists.
 @inlinable
 internal func confusable2ByteToASCII(lead: UInt8, second: UInt8) -> UInt8 {
-    if lead == 0xC2 {
-        if second == 0xA0 { return 0x20 }  // NBSP → space
-        if second == 0xB4 { return 0x27 }  // acute accent → apostrophe
-    } else if lead == 0xCA {
-        if second == 0xBB || second == 0xBC { return 0x27 }  // ʻokina, modifier apostrophe → '
+    switch (lead, second) {
+    case (0xC2, 0xA0): return 0x20 // NBSP → space
+    case (0xC2, 0xB4): return 0x27 // acute accent → apostrophe
+    case (0xCA, 0xBB), (0xCA, 0xBC): return 0x27 // ʻokina, modifier apostrophe → '
+    default: return 0
     }
-    return 0
 }
 
 /// Maps a 3-byte UTF-8 confusable (0xE2 lead) to its canonical ASCII byte.
@@ -146,14 +145,13 @@ internal func confusable2ByteToASCII(lead: UInt8, second: UInt8) -> UInt8 {
 /// - Returns: The canonical ASCII byte, or `0` if no mapping exists.
 @inlinable
 internal func confusable3ByteToASCII(second: UInt8, third: UInt8) -> UInt8 {
-    if second == 0x80 {
-        if third == 0x98 || third == 0x99 { return 0x27 }  // curly single quotes → '
-        if third == 0x9C || third == 0x9D { return 0x22 }  // curly double quotes → "
-        if third >= 0x90 && third <= 0x94 { return 0x2D }  // hyphens/dashes → -
-    } else if second == 0x88 && third == 0x92 {
-        return 0x2D  // minus sign → -
+    switch (second, third) {
+    case (0x80, 0x98), (0x80, 0x99): return 0x27 // curly single quotes → '
+    case (0x80, 0x9C), (0x80, 0x9D): return 0x22 // curly double quotes → "
+    case (0x80, 0x90...0x94): return 0x2D // hyphens/dashes → -
+    case (0x88, 0x92): return 0x2D // minus sign → -
+    default: return 0
     }
-    return 0
 }
 
 /// Maps an ASCII confusable to its canonical form.

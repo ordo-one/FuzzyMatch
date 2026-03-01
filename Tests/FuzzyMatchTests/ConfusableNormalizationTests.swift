@@ -437,3 +437,120 @@ import Testing
     let query = matcher.prepare("hello world")
     #expect(passesCharBitmask(queryMask: query.charBitmask, candidateMask: candidateMask, maxEditDistance: 0))
 }
+
+// MARK: - Boundary Bonus Parity Tests
+//
+// Verify that confusable punctuation produces identical boundary bonuses
+// (and therefore identical scores) as the corresponding ASCII punctuation.
+
+@Test func enDashBoundaryParityED() {
+    // "well-known" with ASCII hyphen vs en-dash should score identically
+    let matcher = FuzzyMatcher()
+    let query = matcher.prepare("wk")
+    var buffer = matcher.makeBuffer()
+    let asciiResult = matcher.score("well-known", against: query, buffer: &buffer)
+    let dashResult = matcher.score("well\u{2013}known", against: query, buffer: &buffer)
+    #expect(asciiResult != nil)
+    #expect(dashResult != nil)
+    #expect(asciiResult!.score == dashResult!.score)
+}
+
+@Test func enDashBoundaryParitySW() {
+    let matcher = FuzzyMatcher(config: .smithWaterman)
+    let query = matcher.prepare("wk")
+    var buffer = matcher.makeBuffer()
+    let asciiResult = matcher.score("well-known", against: query, buffer: &buffer)
+    let dashResult = matcher.score("well\u{2013}known", against: query, buffer: &buffer)
+    #expect(asciiResult != nil)
+    #expect(dashResult != nil)
+    #expect(asciiResult!.score == dashResult!.score)
+}
+
+@Test func nbspBoundaryParitySW() {
+    // NBSP should produce the same whitespace boundary bonus as regular space
+    let matcher = FuzzyMatcher(config: .smithWaterman)
+    let query = matcher.prepare("hw")
+    var buffer = matcher.makeBuffer()
+    let spaceResult = matcher.score("hello world", against: query, buffer: &buffer)
+    let nbspResult = matcher.score("hello\u{00A0}world", against: query, buffer: &buffer)
+    #expect(spaceResult != nil)
+    #expect(nbspResult != nil)
+    #expect(spaceResult!.score == nbspResult!.score)
+}
+
+@Test func curlyApostropheBoundaryParityED() {
+    // Apostrophe creates a word boundary; curly quote should too
+    let matcher = FuzzyMatcher()
+    let query = matcher.prepare("ds")
+    var buffer = matcher.makeBuffer()
+    let asciiResult = matcher.score("don't stop", against: query, buffer: &buffer)
+    let curlyResult = matcher.score("don\u{2019}t stop", against: query, buffer: &buffer)
+    #expect(asciiResult != nil)
+    #expect(curlyResult != nil)
+    #expect(asciiResult!.score == curlyResult!.score)
+}
+
+@Test func curlyApostropheBoundaryParitySW() {
+    let matcher = FuzzyMatcher(config: .smithWaterman)
+    let query = matcher.prepare("ds")
+    var buffer = matcher.makeBuffer()
+    let asciiResult = matcher.score("don't stop", against: query, buffer: &buffer)
+    let curlyResult = matcher.score("don\u{2019}t stop", against: query, buffer: &buffer)
+    #expect(asciiResult != nil)
+    #expect(curlyResult != nil)
+    #expect(asciiResult!.score == curlyResult!.score)
+}
+
+// MARK: - Acronym Matching with Confusable Separators
+
+@Test func acronymWithEnDashSeparatorED() {
+    // "bms" → "Bristol–Myers Squibb" (en-dash) — acronym should work like "Bristol-Myers Squibb"
+    let matcher = FuzzyMatcher()
+    let query = matcher.prepare("bms")
+    var buffer = matcher.makeBuffer()
+    let asciiResult = matcher.score("Bristol-Myers Squibb", against: query, buffer: &buffer)
+    let dashResult = matcher.score("Bristol\u{2013}Myers Squibb", against: query, buffer: &buffer)
+    #expect(asciiResult != nil)
+    #expect(dashResult != nil)
+    #expect(asciiResult!.score == dashResult!.score)
+    #expect(asciiResult!.kind == dashResult!.kind)
+}
+
+@Test func acronymWithEmDashSeparatorED() {
+    let matcher = FuzzyMatcher()
+    let query = matcher.prepare("bms")
+    var buffer = matcher.makeBuffer()
+    let asciiResult = matcher.score("Bristol-Myers Squibb", against: query, buffer: &buffer)
+    let dashResult = matcher.score("Bristol\u{2014}Myers Squibb", against: query, buffer: &buffer)
+    #expect(asciiResult != nil)
+    #expect(dashResult != nil)
+    #expect(asciiResult!.score == dashResult!.score)
+    #expect(asciiResult!.kind == dashResult!.kind)
+}
+
+@Test func acronymWithNBSPSeparatorED() {
+    // Acronym with NBSP word separator should work like regular space
+    let matcher = FuzzyMatcher()
+    let query = matcher.prepare("icag")
+    var buffer = matcher.makeBuffer()
+    let spaceResult = matcher.score("International Consolidated Airlines Group", against: query, buffer: &buffer)
+    let nbspResult = matcher.score(
+        "International\u{00A0}Consolidated\u{00A0}Airlines\u{00A0}Group", against: query, buffer: &buffer
+    )
+    #expect(spaceResult != nil)
+    #expect(nbspResult != nil)
+    #expect(spaceResult!.score == nbspResult!.score)
+    #expect(spaceResult!.kind == nbspResult!.kind)
+}
+
+@Test func acronymWithEnDashSeparatorSW() {
+    let matcher = FuzzyMatcher(config: .smithWaterman)
+    let query = matcher.prepare("bms")
+    var buffer = matcher.makeBuffer()
+    let asciiResult = matcher.score("Bristol-Myers Squibb", against: query, buffer: &buffer)
+    let dashResult = matcher.score("Bristol\u{2013}Myers Squibb", against: query, buffer: &buffer)
+    #expect(asciiResult != nil)
+    #expect(dashResult != nil)
+    #expect(asciiResult!.score == dashResult!.score)
+    #expect(asciiResult!.kind == dashResult!.kind)
+}

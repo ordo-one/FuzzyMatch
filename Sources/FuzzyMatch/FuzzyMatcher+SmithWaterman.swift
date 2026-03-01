@@ -141,35 +141,23 @@ extension FuzzyMatcher {
                     if ascii != 0 {
                         // Latin-1 diacritic normalizes to ASCII — emit single byte
                         candidateStorage.bytes[outIdx] = ascii
-                        let posBonus: Int32
-                        if outIdx == 0 {
-                            posBonus = bonusBoundaryWhitespaceVal
-                        } else {
-                            posBonus = multiByteBonusTier(
-                                prevByte: prevByte,
-                                bonusBoundary: bonusBoundaryVal,
-                                bonusBoundaryWhitespace: bonusBoundaryWhitespaceVal,
-                                bonusBoundaryDelimiter: bonusBoundaryDelimiterVal
-                            )
-                        }
-                        candidateStorage.bonus[outIdx] = posBonus
+                        candidateStorage.bonus[outIdx] = multiBytePositionBonus(
+                            outIdx: outIdx, prevByte: prevByte,
+                            bonusBoundaryVal: bonusBoundaryVal,
+                            bonusBoundaryWhitespaceVal: bonusBoundaryWhitespaceVal,
+                            bonusBoundaryDelimiterVal: bonusBoundaryDelimiterVal
+                        )
                         prevByte = candidateUTF8[idx + 1]
                         outIdx += 1
                     } else {
                         candidateStorage.bytes[outIdx] = byte
                         candidateStorage.bytes[outIdx + 1] = lowered
-                        let posBonus: Int32
-                        if outIdx == 0 {
-                            posBonus = bonusBoundaryWhitespaceVal
-                        } else {
-                            posBonus = multiByteBonusTier(
-                                prevByte: prevByte,
-                                bonusBoundary: bonusBoundaryVal,
-                                bonusBoundaryWhitespace: bonusBoundaryWhitespaceVal,
-                                bonusBoundaryDelimiter: bonusBoundaryDelimiterVal
-                            )
-                        }
-                        candidateStorage.bonus[outIdx] = posBonus
+                        candidateStorage.bonus[outIdx] = multiBytePositionBonus(
+                            outIdx: outIdx, prevByte: prevByte,
+                            bonusBoundaryVal: bonusBoundaryVal,
+                            bonusBoundaryWhitespaceVal: bonusBoundaryWhitespaceVal,
+                            bonusBoundaryDelimiterVal: bonusBoundaryDelimiterVal
+                        )
                         candidateStorage.bonus[outIdx + 1] = 0
                         prevByte = candidateUTF8[idx + 1]
                         outIdx += 2
@@ -179,18 +167,12 @@ extension FuzzyMatcher {
                     let (newLead, newSecond) = lowercaseGreek(lead: byte, second: candidateUTF8[idx + 1])
                     candidateStorage.bytes[outIdx] = newLead
                     candidateStorage.bytes[outIdx + 1] = newSecond
-                    let posBonus: Int32
-                    if outIdx == 0 {
-                        posBonus = bonusBoundaryWhitespaceVal
-                    } else {
-                        posBonus = multiByteBonusTier(
-                            prevByte: prevByte,
-                            bonusBoundary: bonusBoundaryVal,
-                            bonusBoundaryWhitespace: bonusBoundaryWhitespaceVal,
-                            bonusBoundaryDelimiter: bonusBoundaryDelimiterVal
-                        )
-                    }
-                    candidateStorage.bonus[outIdx] = posBonus
+                    candidateStorage.bonus[outIdx] = multiBytePositionBonus(
+                        outIdx: outIdx, prevByte: prevByte,
+                        bonusBoundaryVal: bonusBoundaryVal,
+                        bonusBoundaryWhitespaceVal: bonusBoundaryWhitespaceVal,
+                        bonusBoundaryDelimiterVal: bonusBoundaryDelimiterVal
+                    )
                     candidateStorage.bonus[outIdx + 1] = 0
                     prevByte = candidateUTF8[idx + 1]
                     outIdx += 2
@@ -199,18 +181,12 @@ extension FuzzyMatcher {
                     let (newLead, newSecond) = lowercaseCyrillic(lead: byte, second: candidateUTF8[idx + 1])
                     candidateStorage.bytes[outIdx] = newLead
                     candidateStorage.bytes[outIdx + 1] = newSecond
-                    let posBonus: Int32
-                    if outIdx == 0 {
-                        posBonus = bonusBoundaryWhitespaceVal
-                    } else {
-                        posBonus = multiByteBonusTier(
-                            prevByte: prevByte,
-                            bonusBoundary: bonusBoundaryVal,
-                            bonusBoundaryWhitespace: bonusBoundaryWhitespaceVal,
-                            bonusBoundaryDelimiter: bonusBoundaryDelimiterVal
-                        )
-                    }
-                    candidateStorage.bonus[outIdx] = posBonus
+                    candidateStorage.bonus[outIdx] = multiBytePositionBonus(
+                        outIdx: outIdx, prevByte: prevByte,
+                        bonusBoundaryVal: bonusBoundaryVal,
+                        bonusBoundaryWhitespaceVal: bonusBoundaryWhitespaceVal,
+                        bonusBoundaryDelimiterVal: bonusBoundaryDelimiterVal
+                    )
                     candidateStorage.bonus[outIdx + 1] = 0
                     prevByte = candidateUTF8[idx + 1]
                     outIdx += 2
@@ -236,18 +212,12 @@ extension FuzzyMatcher {
                     } else {
                         candidateStorage.bytes[outIdx] = byte
                         candidateStorage.bytes[outIdx + 1] = candidateUTF8[idx + 1]
-                        let posBonus: Int32
-                        if outIdx == 0 {
-                            posBonus = bonusBoundaryWhitespaceVal
-                        } else {
-                            posBonus = multiByteBonusTier(
-                                prevByte: prevByte,
-                                bonusBoundary: bonusBoundaryVal,
-                                bonusBoundaryWhitespace: bonusBoundaryWhitespaceVal,
-                                bonusBoundaryDelimiter: bonusBoundaryDelimiterVal
-                            )
-                        }
-                        candidateStorage.bonus[outIdx] = posBonus
+                        candidateStorage.bonus[outIdx] = multiBytePositionBonus(
+                            outIdx: outIdx, prevByte: prevByte,
+                            bonusBoundaryVal: bonusBoundaryVal,
+                            bonusBoundaryWhitespaceVal: bonusBoundaryWhitespaceVal,
+                            bonusBoundaryDelimiterVal: bonusBoundaryDelimiterVal
+                        )
                         candidateStorage.bonus[outIdx + 1] = 0
                         prevByte = candidateUTF8[idx + 1]
                         outIdx += 2
@@ -272,18 +242,12 @@ extension FuzzyMatcher {
                         candidateStorage.bytes[outIdx] = byte
                         candidateStorage.bytes[outIdx + 1] = candidateUTF8[idx + 1]
                         candidateStorage.bytes[outIdx + 2] = candidateUTF8[idx + 2]
-                        let posBonus: Int32
-                        if outIdx == 0 {
-                            posBonus = bonusBoundaryWhitespaceVal
-                        } else {
-                            posBonus = multiByteBonusTier(
-                                prevByte: prevByte,
-                                bonusBoundary: bonusBoundaryVal,
-                                bonusBoundaryWhitespace: bonusBoundaryWhitespaceVal,
-                                bonusBoundaryDelimiter: bonusBoundaryDelimiterVal
-                            )
-                        }
-                        candidateStorage.bonus[outIdx] = posBonus
+                        candidateStorage.bonus[outIdx] = multiBytePositionBonus(
+                            outIdx: outIdx, prevByte: prevByte,
+                            bonusBoundaryVal: bonusBoundaryVal,
+                            bonusBoundaryWhitespaceVal: bonusBoundaryWhitespaceVal,
+                            bonusBoundaryDelimiterVal: bonusBoundaryDelimiterVal
+                        )
                         candidateStorage.bonus[outIdx + 1] = 0
                         candidateStorage.bonus[outIdx + 2] = 0
                         prevByte = candidateUTF8[idx + 2]
