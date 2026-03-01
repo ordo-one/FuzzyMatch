@@ -283,6 +283,28 @@ internal func computeBoundaryMaskCompressed(
                 } else {
                     outIdx += 2
                 }
+            } else if (byte == 0xC2 || byte == 0xCA) && inIdx + 1 < count {
+                let ascii = confusable2ByteToASCII(lead: byte, second: originalBytes[inIdx + 1])
+                if ascii != 0 {
+                    // 2-byte confusable collapses to 1 ASCII byte
+                    prevMeaningfulByte = ascii
+                    outIdx += 1
+                } else {
+                    prevMeaningfulByte = originalBytes[inIdx + 1]
+                    outIdx += 2
+                }
+                inIdx += 2
+            } else if byte == 0xE2 && inIdx + 2 < count {
+                let ascii = confusable3ByteToASCII(second: originalBytes[inIdx + 1], third: originalBytes[inIdx + 2])
+                if ascii != 0 {
+                    // 3-byte confusable collapses to 1 ASCII byte
+                    prevMeaningfulByte = ascii
+                    outIdx += 1
+                } else {
+                    prevMeaningfulByte = originalBytes[inIdx + 2]
+                    outIdx += 3
+                }
+                inIdx += 3
             } else {
                 prevMeaningfulByte = byte
                 inIdx += 1

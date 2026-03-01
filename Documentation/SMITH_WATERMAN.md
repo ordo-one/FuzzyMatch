@@ -492,11 +492,14 @@ The merged lowercase + bonus precomputation pass detects pure-ASCII candidates v
 
 ### Multi-Byte Slow Path
 
-For candidates containing Latin-1, Greek, or Cyrillic characters, the slow path:
+For candidates containing non-ASCII characters, the slow path:
 
-1. Dispatches to the appropriate case-folding function based on the lead byte (0xC3, 0xCE/0xCF, 0xD0/0xD1)
-2. Uses `multiByteBonusTier()` for boundary classification of multi-byte characters
-3. Assigns bonus 0 to continuation bytes within a multi-byte character
+1. **Combining marks** (0xCC/0xCD) — stripped entirely (same as edit distance mode)
+2. **Latin-1 diacritics** (0xC3) — case-folded and normalized to ASCII base letters when possible (e.g., `é` → `e`)
+3. **Greek** (0xCE/0xCF) and **Cyrillic** (0xD0/0xD1) — case-folded, emitting 2 output bytes
+4. **Confusable characters** (0xC2/0xCA for 2-byte, 0xE2 for 3-byte) — normalized to canonical ASCII (e.g., curly quotes → `'`, en-dash → `-`, NBSP → space), emitting 1 output byte with the appropriate bonus tier (NBSP gets whitespace boundary bonus; punctuation gets general boundary bonus)
+5. Uses `multiByteBonusTier()` for boundary classification of non-confusable multi-byte characters
+6. Assigns bonus 0 to continuation bytes within a multi-byte character
 
 ### Zero-Allocation Design
 

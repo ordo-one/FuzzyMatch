@@ -403,6 +403,22 @@ Custom byte-level case folding is used instead of Swift's `String.lowercased()` 
 
 Edit distance and trigrams operate at the byte level. See [DAMERAU_LEVENSHTEIN.md](Documentation/DAMERAU_LEVENSHTEIN.md#unicode-support) for details on what is and isn't supported.
 
+### Normalization
+
+Two kinds of Unicode normalization are performed during matching, allowing queries and candidates to use visually similar characters interchangeably:
+
+- **Diacritic normalization** — Latin-1 diacritics are folded to their ASCII base letters (`café` matches `cafe`, `über` matches `uber`). Combining diacritical marks (U+0300–U+036F) are stripped.
+- **Confusable-character normalization** — Visually similar punctuation and whitespace characters are collapsed to their ASCII canonical forms:
+
+| Group | Characters | Canonical |
+|-------|-----------|-----------|
+| Apostrophe-like | `'` `'` `` ` `` `´` `ʻ` `ʼ` | `'` U+0027 |
+| Double-quote-like | `"` `"` | `"` U+0022 |
+| Dash-like | `‐` `‑` `‒` `–` `—` `−` | `-` U+002D |
+| Space-like | NBSP | space U+0020 |
+
+This means `Bo's Song` (curly quote) is found by typing `Bo's So` (ASCII apostrophe), `Hawaiʻi` (ʻokina) matches `Hawai'i`, and `well–known` (en-dash) matches `well-known`.
+
 ### Limitations
 
 - **No full Unicode normalization (NFC/NFD)** — precomposed characters (e.g., `é` U+00E9) and their decomposed forms (`e` + `◌́` U+0065 U+0301) will still match because basic combining diacritical marks (U+0300–U+036F) are stripped during matching, but full NFC/NFD normalization is not performed

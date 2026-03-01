@@ -83,7 +83,7 @@ extension FuzzyMatcher {
             var prevByte: UInt8 = 0
             for i in 0..<candidateLength {
                 let byte = candidateUTF8[i]
-                candidateStorage.bytes[i] = lowercaseASCII(byte)
+                candidateStorage.bytes[i] = confusableASCIIToCanonical(lowercaseASCII(byte))
 
                 let posBonus: Int32
                 if i == 0 {
@@ -215,8 +215,83 @@ extension FuzzyMatcher {
                     prevByte = candidateUTF8[idx + 1]
                     outIdx += 2
                     idx += 2
+                } else if (byte == 0xC2 || byte == 0xCA) && idx + 1 < candidateLength {
+                    let ascii = confusable2ByteToASCII(lead: byte, second: candidateUTF8[idx + 1])
+                    if ascii != 0 {
+                        // Confusable normalizes to ASCII — emit single byte
+                        candidateStorage.bytes[outIdx] = ascii
+                        let posBonus: Int32
+                        if outIdx == 0 {
+                            posBonus = bonusBoundaryWhitespaceVal
+                        } else if ascii == 0x20 {
+                            // NBSP normalizes to space — whitespace boundary
+                            posBonus = bonusBoundaryWhitespaceVal
+                        } else {
+                            // Apostrophe/quote/dash — non-word punctuation boundary
+                            posBonus = bonusBoundaryVal
+                        }
+                        candidateStorage.bonus[outIdx] = posBonus
+                        prevByte = ascii
+                        outIdx += 1
+                    } else {
+                        candidateStorage.bytes[outIdx] = byte
+                        candidateStorage.bytes[outIdx + 1] = candidateUTF8[idx + 1]
+                        let posBonus: Int32
+                        if outIdx == 0 {
+                            posBonus = bonusBoundaryWhitespaceVal
+                        } else {
+                            posBonus = multiByteBonusTier(
+                                prevByte: prevByte,
+                                bonusBoundary: bonusBoundaryVal,
+                                bonusBoundaryWhitespace: bonusBoundaryWhitespaceVal,
+                                bonusBoundaryDelimiter: bonusBoundaryDelimiterVal
+                            )
+                        }
+                        candidateStorage.bonus[outIdx] = posBonus
+                        candidateStorage.bonus[outIdx + 1] = 0
+                        prevByte = candidateUTF8[idx + 1]
+                        outIdx += 2
+                    }
+                    idx += 2
+                } else if byte == 0xE2 && idx + 2 < candidateLength {
+                    let ascii = confusable3ByteToASCII(second: candidateUTF8[idx + 1], third: candidateUTF8[idx + 2])
+                    if ascii != 0 {
+                        // Confusable normalizes to ASCII — emit single byte
+                        candidateStorage.bytes[outIdx] = ascii
+                        let posBonus: Int32
+                        if outIdx == 0 {
+                            posBonus = bonusBoundaryWhitespaceVal
+                        } else {
+                            // All 3-byte confusables are punctuation — non-word boundary
+                            posBonus = bonusBoundaryVal
+                        }
+                        candidateStorage.bonus[outIdx] = posBonus
+                        prevByte = ascii
+                        outIdx += 1
+                    } else {
+                        candidateStorage.bytes[outIdx] = byte
+                        candidateStorage.bytes[outIdx + 1] = candidateUTF8[idx + 1]
+                        candidateStorage.bytes[outIdx + 2] = candidateUTF8[idx + 2]
+                        let posBonus: Int32
+                        if outIdx == 0 {
+                            posBonus = bonusBoundaryWhitespaceVal
+                        } else {
+                            posBonus = multiByteBonusTier(
+                                prevByte: prevByte,
+                                bonusBoundary: bonusBoundaryVal,
+                                bonusBoundaryWhitespace: bonusBoundaryWhitespaceVal,
+                                bonusBoundaryDelimiter: bonusBoundaryDelimiterVal
+                            )
+                        }
+                        candidateStorage.bonus[outIdx] = posBonus
+                        candidateStorage.bonus[outIdx + 1] = 0
+                        candidateStorage.bonus[outIdx + 2] = 0
+                        prevByte = candidateUTF8[idx + 2]
+                        outIdx += 3
+                    }
+                    idx += 3
                 } else {
-                    candidateStorage.bytes[outIdx] = lowercaseASCII(byte)
+                    candidateStorage.bytes[outIdx] = confusableASCIIToCanonical(lowercaseASCII(byte))
                     let posBonus: Int32
                     if outIdx == 0 {
                         posBonus = bonusBoundaryWhitespaceVal
