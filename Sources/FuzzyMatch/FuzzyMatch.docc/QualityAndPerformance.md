@@ -89,7 +89,11 @@ swift package --package-path Benchmarks benchmark
 
 FuzzyMatch supports case-insensitive matching for ASCII, Latin-1 Supplement (Ä→ä, Ö→ö, Å→å), Greek (Α→α, Σ→σ, Ω→ω), and basic Cyrillic (А→а, Я→я, Ё→ё). Greek and Cyrillic support is provided as a courtesy for users who need these scripts, but they are not a primary target for the package. All string processing operates on raw UTF-8 bytes — custom byte-level case folding is used instead of Swift's `String.lowercased()` to avoid per-call allocations in the hot scoring path. An ASCII fast path skips multi-byte dispatch for the vast majority of candidates, maintaining full throughput on ASCII-dominant corpora.
 
-Both matching modes share the same UTF-8 processing and case folding. See [DAMERAU_LEVENSHTEIN.md](https://github.com/ordo-one/FuzzyMatch/blob/main/Documentation/DAMERAU_LEVENSHTEIN.md#unicode-support) for the full list of supported scripts and byte-level semantics.
+Two kinds of normalization are applied during matching:
+- **Diacritic normalization** — Latin-1 diacritics fold to ASCII base letters (`café` → `cafe`); combining marks (U+0300–U+036F) are stripped
+- **Confusable-character normalization** — visually similar punctuation and whitespace collapse to canonical ASCII forms (curly quotes → `'`, en-dash → `-`, NBSP → space, ʻokina → `'`)
+
+Both matching modes share the same UTF-8 processing, case folding, and normalization. See [DAMERAU_LEVENSHTEIN.md](https://github.com/ordo-one/FuzzyMatch/blob/main/Documentation/DAMERAU_LEVENSHTEIN.md#unicode-support) for the full list of supported scripts and byte-level semantics.
 
 ## Zero-Allocation Design
 

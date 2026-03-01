@@ -34,9 +34,9 @@ Both modes share the same API surface, zero-allocation hot path, and `score(_:ag
 The library follows a pipeline architecture:
 
 1. **Query Preparation** (`FuzzyQuery.swift`) - Precomputes lowercased form, character bitmask, trigrams, and `containsSpaces` flag for the query
-2. **Prefiltering** (`Prefilters.swift`) - Three-stage fast rejection: length bounds (O(1)), 37-bit character bitmask (O(1)), trigram similarity (O(n))
+2. **Prefiltering & Normalization** (`Prefilters.swift`) - Three-stage fast rejection: length bounds (O(1)), 37-bit character bitmask (O(1)), trigram similarity (O(n)). Also contains `lowercaseUTF8()` which performs case folding, diacritic normalization (Latin-1 → ASCII), and confusable-character normalization (curly quotes → `'`, en-dash → `-`, NBSP → space, etc.)
 3. **Edit Distance** (`EditDistance.swift`) - Damerau-Levenshtein with prefix and substring variants using rolling array optimization
-4. **Smith-Waterman** (`SmithWaterman.swift`, `FuzzyMatcher+SmithWaterman.swift`) - Local alignment DP with tiered boundary bonuses, multi-word atom splitting, and integer arithmetic
+4. **Smith-Waterman** (`SmithWaterman.swift`, `FuzzyMatcher+SmithWaterman.swift`) - Local alignment DP with tiered boundary bonuses, multi-word atom splitting, and integer arithmetic. Mirrors the normalization from Prefilters.swift in its merged lowercase+bonus pass
 5. **Scoring** (`ScoringBonuses.swift`, `WordBoundary.swift`) - Position-based bonuses for word boundaries, consecutive matches, and gap penalties (edit distance mode)
 6. **Acronym Matching** (`FuzzyMatcher.swift`) - Word-initial character matching for abbreviations (e.g., "bms" → "Bristol-Myers Squibb") — used by both modes
 7. **Result** (`ScoredMatch.swift`, `MatchKind.swift`) - Final score (0.0-1.0) with match type (exact/prefix/substring/acronym)

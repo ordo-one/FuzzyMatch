@@ -216,6 +216,27 @@ internal func computeBoundaryMask(
     return mask
 }
 
+/// Advances output position and predecessor byte after a confusable normalization check.
+///
+/// If the confusable resolved to an ASCII byte (`ascii != 0`), the output advances by 1
+/// (the multi-byte sequence collapsed). Otherwise it advances by the original `byteCount`.
+@inlinable
+internal func advanceConfusable(
+    ascii: UInt8,
+    lastOriginalByte: UInt8,
+    byteCount: Int,
+    prevMeaningfulByte: inout UInt8,
+    outIdx: inout Int
+) {
+    if ascii != 0 {
+        prevMeaningfulByte = ascii
+        outIdx += 1
+    } else {
+        prevMeaningfulByte = lastOriginalByte
+        outIdx += byteCount
+    }
+}
+
 /// Precomputes word boundary positions in compressed (post-lowercasing) index space.
 ///
 /// When combining diacritical marks (U+0300–U+036F) are stripped during lowercasing,
@@ -283,6 +304,20 @@ internal func computeBoundaryMaskCompressed(
                 } else {
                     outIdx += 2
                 }
+            } else if (byte == 0xC2 || byte == 0xCA) && inIdx + 1 < count {
+                let ascii = confusable2ByteToASCII(lead: byte, second: originalBytes[inIdx + 1])
+                advanceConfusable(
+                    ascii: ascii, lastOriginalByte: originalBytes[inIdx + 1],
+                    byteCount: 2, prevMeaningfulByte: &prevMeaningfulByte, outIdx: &outIdx
+                )
+                inIdx += 2
+            } else if byte == 0xE2 && inIdx + 2 < count {
+                let ascii = confusable3ByteToASCII(second: originalBytes[inIdx + 1], third: originalBytes[inIdx + 2])
+                advanceConfusable(
+                    ascii: ascii, lastOriginalByte: originalBytes[inIdx + 2],
+                    byteCount: 3, prevMeaningfulByte: &prevMeaningfulByte, outIdx: &outIdx
+                )
+                inIdx += 3
             } else {
                 prevMeaningfulByte = byte
                 inIdx += 1

@@ -768,6 +768,26 @@ FuzzyMatcher operates on UTF-8 bytes and supports case-insensitive matching for 
 
 The primary corpus and use case has been financial instruments (stock tickers, fund names, ISINs), which are predominantly ASCII and Latin-1. Greek and Cyrillic support is provided as a courtesy for users who need these scripts, but they are not a primary target for the package.
 
+#### Normalization
+
+Two kinds of normalization are applied during the lowercasing pass, allowing visually similar characters to match interchangeably:
+
+**Diacritic normalization** — Latin-1 Supplement diacritics (lead byte 0xC3) are folded to their ASCII base letters via `latin1ToASCII()`. For example, `é` (0xC3 0xA9) becomes `e` (0x65). Combining diacritical marks (U+0300–U+036F, lead bytes 0xCC/0xCD) are stripped entirely, so both precomposed (`café`) and decomposed (`cafe\u{0301}`) forms match `cafe`.
+
+**Confusable-character normalization** — Visually similar punctuation and whitespace characters are collapsed to their ASCII canonical forms. Multi-byte confusables collapse to a single ASCII byte, exactly like Latin-1 diacritics:
+
+| Group | Characters (UTF-8) | Canonical |
+|-------|-------------------|-----------|
+| Apostrophe-like | `'` `'` U+2018–2019 (0xE2 0x80 0x98–99), `` ` `` U+0060, `´` U+00B4 (0xC2 0xB4), `ʻ` U+02BB (0xCA 0xBB), `ʼ` U+02BC (0xCA 0xBC) | `'` U+0027 |
+| Double-quote-like | `"` `"` U+201C–201D (0xE2 0x80 0x9C–9D) | `"` U+0022 |
+| Dash-like | `‐` `‑` `‒` `–` `—` U+2010–2014 (0xE2 0x80 0x90–94), `−` U+2212 (0xE2 0x88 0x92) | `-` U+002D |
+| Space-like | NBSP U+00A0 (0xC2 0xA0) | space U+0020 |
+
+Both query and candidate are normalized identically during lowercasing, so the DP operates on already-normalized bytes. The lookup functions are:
+- `confusableASCIIToCanonical(_:)` — maps grave accent (0x60 → 0x27)
+- `confusable2ByteToASCII(lead:second:)` — handles 0xC2 (NBSP, acute accent) and 0xCA (ʻokina, modifier apostrophe) lead bytes
+- `confusable3ByteToASCII(second:third:)` — handles 0xE2 lead byte (curly quotes, dashes, minus sign)
+
 **What is byte-level:**
 - Edit distance counts byte-level edits. Most Greek/Cyrillic single-character substitutions cost 1 byte edit (when the lead byte is preserved). Cross-lead-byte substitutions (e.g., Π→α, which changes both lead and second byte) cost 2 byte edits.
 - Trigrams are byte-level 3-grams, not character-level.

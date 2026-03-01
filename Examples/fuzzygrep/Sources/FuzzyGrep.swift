@@ -1,4 +1,4 @@
-//===----------------------------------------------------------------------===//
+// ===----------------------------------------------------------------------===//
 //
 // This source file is part of the FuzzyMatch open source project
 //
@@ -9,7 +9,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 //
-//===----------------------------------------------------------------------===//
+// ===----------------------------------------------------------------------===//
 
 #if canImport(Darwin)
 import Darwin
@@ -200,8 +200,8 @@ private func readStdin(into workerChannels: [AsyncChannel<TaggedChunk>],
         let chunk = TaggedChunk(sequenceNumber: sequenceNumber, lines: lines)
         await workerChannels[sequenceNumber % workerCount].send(chunk)
     }
-    for ch in workerChannels {
-        ch.finish()
+    for channel in workerChannels {
+        channel.finish()
     }
 }
 

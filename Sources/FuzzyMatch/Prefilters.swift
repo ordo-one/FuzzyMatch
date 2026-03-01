@@ -109,6 +109,63 @@ internal func latin1ToASCII(_ lowercasedSecondByte: UInt8) -> UInt8 {
     }
 }
 
+/// Maps a 2-byte UTF-8 confusable to its canonical ASCII byte.
+///
+/// Handles confusable characters with lead bytes 0xC2 and 0xCA:
+/// - 0xC2 0xA0 (NBSP U+00A0) → 0x20 (space)
+/// - 0xC2 0xB4 (acute accent U+00B4) → 0x27 (apostrophe)
+/// - 0xCA 0xBB (ʻokina U+02BB) → 0x27 (apostrophe)
+/// - 0xCA 0xBC (modifier apostrophe U+02BC) → 0x27 (apostrophe)
+///
+/// - Parameters:
+///   - lead: The lead byte (0xC2 or 0xCA).
+///   - second: The second byte of the UTF-8 sequence.
+/// - Returns: The canonical ASCII byte, or `0` if no mapping exists.
+@inlinable
+internal func confusable2ByteToASCII(lead: UInt8, second: UInt8) -> UInt8 {
+    switch (lead, second) {
+    case (0xC2, 0xA0): return 0x20 // NBSP → space
+    case (0xC2, 0xB4): return 0x27 // acute accent → apostrophe
+    case (0xCA, 0xBB), (0xCA, 0xBC): return 0x27 // ʻokina, modifier apostrophe → '
+    default: return 0
+    }
+}
+
+/// Maps a 3-byte UTF-8 confusable (0xE2 lead) to its canonical ASCII byte.
+///
+/// Handles confusable characters with lead byte 0xE2:
+/// - 0xE2 0x80 0x98–0x99 (curly single quotes U+2018–2019) → 0x27 (apostrophe)
+/// - 0xE2 0x80 0x9C–0x9D (curly double quotes U+201C–201D) → 0x22 (double quote)
+/// - 0xE2 0x80 0x90–0x94 (hyphens/dashes U+2010–2014) → 0x2D (hyphen-minus)
+/// - 0xE2 0x88 0x92 (minus sign U+2212) → 0x2D (hyphen-minus)
+///
+/// - Parameters:
+///   - second: The second byte of the 0xE2-prefixed UTF-8 sequence.
+///   - third: The third byte of the UTF-8 sequence.
+/// - Returns: The canonical ASCII byte, or `0` if no mapping exists.
+@inlinable
+internal func confusable3ByteToASCII(second: UInt8, third: UInt8) -> UInt8 {
+    switch (second, third) {
+    case (0x80, 0x98), (0x80, 0x99): return 0x27 // curly single quotes → '
+    case (0x80, 0x9C), (0x80, 0x9D): return 0x22 // curly double quotes → "
+    case (0x80, 0x90...0x94): return 0x2D // hyphens/dashes → -
+    case (0x88, 0x92): return 0x2D // minus sign → -
+    default: return 0
+    }
+}
+
+/// Maps an ASCII confusable to its canonical form.
+///
+/// Currently handles:
+/// - 0x60 (grave accent `` ` ``) → 0x27 (apostrophe `'`)
+///
+/// - Parameter byte: The ASCII byte to check.
+/// - Returns: The canonical ASCII byte, or the original byte if no mapping exists.
+@inlinable
+internal func confusableASCIIToCanonical(_ byte: UInt8) -> UInt8 {
+    byte == 0x60 ? 0x27 : byte
+}
+
 /// Lowercases the second byte of a 2-byte UTF-8 Latin-1 Supplement sequence.
 ///
 /// Uppercase Latin-1 Supplement characters (U+00C0-U+00DE, except U+00D7 ×)
@@ -202,7 +259,7 @@ internal func lowercaseUTF8(
     let count = source.count
     if isASCII {
         for i in 0..<count {
-            destination[i] = lowercaseASCII(source[i])
+            destination[i] = confusableASCIIToCanonical(lowercaseASCII(source[i]))
         }
         return count
     } else {
@@ -237,8 +294,31 @@ internal func lowercaseUTF8(
                 destination[outIdx + 1] = newSecond
                 outIdx += 2
                 i += 2
+            } else if (byte == 0xC2 || byte == 0xCA) && i + 1 < count {
+                let ascii = confusable2ByteToASCII(lead: byte, second: source[i + 1])
+                if ascii != 0 {
+                    destination[outIdx] = ascii
+                    outIdx += 1
+                } else {
+                    destination[outIdx] = byte
+                    destination[outIdx + 1] = source[i + 1]
+                    outIdx += 2
+                }
+                i += 2
+            } else if byte == 0xE2 && i + 2 < count {
+                let ascii = confusable3ByteToASCII(second: source[i + 1], third: source[i + 2])
+                if ascii != 0 {
+                    destination[outIdx] = ascii
+                    outIdx += 1
+                } else {
+                    destination[outIdx] = byte
+                    destination[outIdx + 1] = source[i + 1]
+                    destination[outIdx + 2] = source[i + 2]
+                    outIdx += 3
+                }
+                i += 3
             } else {
-                destination[outIdx] = lowercaseASCII(byte)
+                destination[outIdx] = confusableASCIIToCanonical(lowercaseASCII(byte))
                 outIdx += 1
                 i += 1
             }
@@ -360,8 +440,21 @@ internal func computeCharBitmaskCaseInsensitive(_ bytes: Span<UInt8>) -> UInt64 
                 mask |= (1 << bit)
             }
             i += 2
+        } else if (byte == 0xC2 || byte == 0xCA) && i + 1 < bytes.count {
+            let ascii = confusable2ByteToASCII(lead: byte, second: bytes[i + 1])
+            if ascii != 0 {
+                mask |= charBitmaskLookup[Int(ascii)] & charBitmaskMask
+            }
+            // Non-confusable 2-byte chars: targets (', ", -, space) all map to 0 in bitmask
+            i += 2
+        } else if byte == 0xE2 && i + 2 < bytes.count {
+            let ascii = confusable3ByteToASCII(second: bytes[i + 1], third: bytes[i + 2])
+            if ascii != 0 {
+                mask |= charBitmaskLookup[Int(ascii)] & charBitmaskMask
+            }
+            i += 3
         } else {
-            mask |= charBitmaskLookup[Int(byte)] & charBitmaskMask
+            mask |= charBitmaskLookup[Int(confusableASCIIToCanonical(byte))] & charBitmaskMask
             i += 1
         }
     }

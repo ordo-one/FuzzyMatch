@@ -176,6 +176,28 @@ func smithWatermanScore(
     }
 }
 
+/// Computes the position bonus for a multi-byte character in the merged lowercase+bonus pass.
+///
+/// Position 0 always gets ``bonusBoundaryWhitespace``; subsequent positions delegate
+/// to ``multiByteBonusTier`` which inspects `prevByte` for the appropriate tier.
+@inlinable
+func multiBytePositionBonus(
+    outIdx: Int,
+    prevByte: UInt8,
+    bonusBoundaryVal: Int32,
+    bonusBoundaryWhitespaceVal: Int32,
+    bonusBoundaryDelimiterVal: Int32
+) -> Int32 {
+    outIdx == 0
+        ? bonusBoundaryWhitespaceVal
+        : multiByteBonusTier(
+            prevByte: prevByte,
+            bonusBoundary: bonusBoundaryVal,
+            bonusBoundaryWhitespace: bonusBoundaryWhitespaceVal,
+            bonusBoundaryDelimiter: bonusBoundaryDelimiterVal
+        )
+}
+
 /// Computes the tiered boundary bonus for a multi-byte character position.
 ///
 /// Used by the slow path (Latin Extended, Greek, Cyrillic) where the current
