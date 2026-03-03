@@ -86,29 +86,29 @@ Each query has an `expected_name` in `Resources/queries.tsv` (4th column) that d
 |---|--:|--:|--:|--:|--:|--:|--:|--:|
 | Exact name | 35 | **35/35 100%** | **35/35 100%** | **35/35 100%** | **35/35 100%** | 33/35 94% | 34/35 97% | **35/35 100%** |
 | Exact ISIN | 6 | **6/6 100%** | **6/6 100%** | **6/6 100%** | 5/6 83% | **6/6 100%** | **6/6 100%** | **6/6 100%** |
-| Prefix (top-5) | 21 | **21/21 100%** | 16/21 76% | 16/21 76% | 18/21 86% | 16/21 76% | **21/21 100%** | 19/21 90% |
-| Typo (top-5) | 41 | **41/41 100%** | 23/41 56% | 23/41 56% | 33/41 80% | 33/41 80% | 22/41 54% | 36/41 88% |
-| Keyword / substring | 22 | **22/22 100%** | **22/22 100%** | **22/22 100%** | 20/22 91% | **22/22 100%** | **22/22 100%** | **22/22 100%** |
-| Multi-word descriptive | 15 | **15/15 100%** | **15/15 100%** | **15/15 100%** | 12/15 80% | 13/15 87% | **15/15 100%** | **15/15 100%** |
+| Prefix (top-5) | 21 | **21/21 100%** | 16/21 76% | 16/21 76% | 18/21 85% | 16/21 76% | **21/21 100%** | 19/21 90% |
+| Typo (top-5) | 41 | **41/41 100%** | 23/41 56% | 23/41 56% | 33/41 80% | 33/41 80% | 22/41 53% | 36/41 88% |
+| Keyword / substring | 22 | **22/22 100%** | **22/22 100%** | **22/22 100%** | 20/22 90% | **22/22 100%** | **22/22 100%** | **22/22 100%** |
+| Multi-word descriptive | 15 | **15/15 100%** | **15/15 100%** | **15/15 100%** | 12/15 80% | 13/15 86% | **15/15 100%** | **15/15 100%** |
 | Abbreviation (top-5) | 12 | 10/12 83% | **12/12 100%** | 4/12 33% | 0/12 0% | 1/12 8% | 6/12 50% | 1/12 8% |
-| **TOTAL** | **152** | **150/152 99%** | 129/152 85% | 121/152 80% | 123/152 81% | 124/152 82% | 126/152 83% | 134/152 88% |
+| **TOTAL** | **152** | **150/152 98%** | 129/152 84% | 121/152 79% | 123/152 80% | 124/152 81% | 126/152 82% | 134/152 88% |
 
-FuzzyMatch (ED) leads with **99% ground truth accuracy** — 11 percentage points ahead of the next best (Ifrit at 88%). It scores **100% on 6 of 7 categories**, with abbreviation (83%) as its only imperfect area. Its key advantage is typo handling: **100% (41/41)** vs 54-88% for all others. Ifrit is the second-best overall at 88%, with strong typo handling (88%) and perfect scores on exact name, ISIN, substring, and multi-word categories. FuzzyMatch (SW) achieves **100% on abbreviation** thanks to the shared acronym pass (which surfaces the correct result within top-5 even when substring matches rank higher).
+FuzzyMatch (ED) leads with **98% ground truth accuracy** — 10 percentage points ahead of the next best (Ifrit at 88%). It scores **100% on 6 of 7 categories**, with abbreviation (83%) as its only imperfect area. Its key advantage is typo handling: **100% (41/41)** vs 53-88% for all others. Ifrit is the second-best overall at 88%, with strong typo handling (88%) and perfect scores on exact name, ISIN, substring, and multi-word categories. FuzzyMatch (SW) achieves **100% on abbreviation** thanks to the shared acronym pass (which surfaces the correct result within top-5 even when substring matches rank higher).
 
 ## Results Summary
 
 | Metric | FuzzyMatch (ED) | FuzzyMatch (SW) | nucleo | RapidFuzz (WRatio) | RapidFuzz (Partial) | Ifrit | fzf |
 |--------|-------------|--------|--------|-------------|--------------|-------|-----|
 | Queries returning results | **197/197** | 187/197 | 190/197 | **197/197** | **197/197** | **197/197** | 186/197 |
-| Top-1 agreement with FuzzyMatch (ED) | -- | 79/197 | 77/197 | 85/197 | 40/197 | 95/197 | **128/197** |
-| Top-1 agreement with FuzzyMatch (SW) | 79/197 | -- | **182/197** | 50/197 | 39/197 | 123/197 | 83/197 |
-| Top-1 agreement with nucleo | 77/197 | **182/197** | -- | 50/197 | 39/197 | 123/197 | 86/197 |
+| Top-1 agreement with FuzzyMatch (ED) | -- | 79/197 | 77/197 | 84/197 | 40/197 | 95/197 | **128/197** |
+| Top-1 agreement with FuzzyMatch (SW) | 79/197 | -- | **182/197** | 49/197 | 37/197 | 123/197 | 83/197 |
+| Top-1 agreement with nucleo | 77/197 | **182/197** | -- | 49/197 | 37/197 | 123/197 | 86/197 |
 | Top-1 agreement with Ifrit | 95/197 | 123/197 | 123/197 | 62/197 | 40/197 | -- | 73/197 |
 | Top-1 agreement with fzf | **128/197** | 83/197 | 86/197 | 55/197 | 32/197 | 73/197 | -- |
-| RapidFuzz (WRatio) vs RapidFuzz (Partial) | | | | 56/197 | 56/197 | | |
+| RapidFuzz (WRatio) vs RapidFuzz (Partial) | | | | 55/197 | 55/197 | | |
 | All seven agree on top-1 | 17/197 | | | | | | |
 
-FuzzyMatch (ED) agrees with fzf's top-1 ranking 65% of the time (128/197) — the highest pairwise agreement with fzf. FuzzyMatch (SW) agrees with nucleo 92% of the time (182/197), which is expected since both use Smith-Waterman-family algorithms. FuzzyMatch (ED) returns results for all 197/197 queries; FuzzyMatch (SW) returns 187/197 and fzf 186/197. Ifrit returns results for all 197/197 queries and agrees with FuzzyMatch (ED) on 95/197 top-1 rankings (48%). RapidFuzz's two scorers agree with each other only 56/197 times, showing how dramatically scorer choice affects ranking. PartialRatio has the lowest agreement with all other matchers (32–40/197), while WRatio fares slightly better (50–85/197).
+FuzzyMatch (ED) agrees with fzf's top-1 ranking 65% of the time (128/197) — the highest pairwise agreement with fzf. FuzzyMatch (SW) agrees with nucleo 92% of the time (182/197), which is expected since both use Smith-Waterman-family algorithms. FuzzyMatch (ED) returns results for all 197/197 queries; FuzzyMatch (SW) returns 187/197 and fzf 186/197. Ifrit returns results for all 197/197 queries and agrees with FuzzyMatch (ED) on 95/197 top-1 rankings (48%). RapidFuzz's two scorers agree with each other only 55/197 times, showing how dramatically scorer choice affects ranking. PartialRatio has the lowest agreement with all other matchers (32–40/197), while WRatio fares slightly better (49–84/197).
 
 ### Per-Category Agreement
 
@@ -128,23 +128,23 @@ FuzzyMatch (ED) agrees with fzf's top-1 ranking 65% of the time (128/197) — th
 
 | | Ground Truth | Hit Rate | Typo (top-5) | Prefix (top-5) | Substring | Abbreviation (top-5) |
 |---|--:|--:|--:|--:|--:|--:|
-| **FuzzyMatch (ED)** | **150/152 99%** | 197/197 | **41/41 100%** | **21/21 100%** | **22/22 100%** | 10/12 83% |
+| **FuzzyMatch (ED)** | **150/152 98%** | 197/197 | **41/41 100%** | **21/21 100%** | **22/22 100%** | 10/12 83% |
 | **Ifrit** | 134/152 88% | 197/197 | 36/41 88% | 19/21 90% | **22/22 100%** | 1/12 8% |
-| **FuzzyMatch (SW)** | 129/152 85% | 187/197 | 23/41 56% | 16/21 76% | **22/22 100%** | **12/12 100%** |
-| **fzf** | 126/152 83% | 186/197 | 22/41 54% | **21/21 100%** | **22/22 100%** | 6/12 50% |
-| **RapidFuzz (Partial)** | 124/152 82% | 197/197 | 33/41 80% | 16/21 76% | **22/22 100%** | 1/12 8% |
-| **RapidFuzz (WRatio)** | 123/152 81% | 197/197 | 33/41 80% | 18/21 86% | 20/22 91% | 0/12 0% |
-| **nucleo** | 121/152 80% | 190/197 | 23/41 56% | 16/21 76% | **22/22 100%** | 4/12 33% |
+| **FuzzyMatch (SW)** | 129/152 84% | 187/197 | 23/41 56% | 16/21 76% | **22/22 100%** | **12/12 100%** |
+| **fzf** | 126/152 82% | 186/197 | 22/41 53% | **21/21 100%** | **22/22 100%** | 6/12 50% |
+| **RapidFuzz (Partial)** | 124/152 81% | 197/197 | 33/41 80% | 16/21 76% | **22/22 100%** | 1/12 8% |
+| **RapidFuzz (WRatio)** | 123/152 80% | 197/197 | 33/41 80% | 18/21 85% | 20/22 90% | 0/12 0% |
+| **nucleo** | 121/152 79% | 190/197 | 23/41 56% | 16/21 76% | **22/22 100%** | 4/12 33% |
 
-**FuzzyMatch (ED)** achieves the highest ground truth accuracy at **99% (150/152)** — scoring **100% on 6 of 7 categories**. Its Damerau-Levenshtein foundation gives it the strongest typo handling of any matcher — **100% (41/41)** vs 88% for the next best (Ifrit) and just 54-80% for the rest. It handles adjacent-key typos ("Voeing" for Boeing), transpositions ("Goldamn"), dropped characters ("blakstone"), and doubled characters ("Gooldman") that Smith-Waterman-family matchers cannot. Its only imperfect category is abbreviation (10/12, 83%), where literal substring matches in the 272K corpus outrank the acronym pass for 2 queries ("icag", "bsc"). It returns results for all 197/197 queries.
+**FuzzyMatch (ED)** achieves the highest ground truth accuracy at **98% (150/152)** — scoring **100% on 6 of 7 categories**. Its Damerau-Levenshtein foundation gives it the strongest typo handling of any matcher — **100% (41/41)** vs 88% for the next best (Ifrit) and just 53-80% for the rest. It handles adjacent-key typos ("Voeing" for Boeing), transpositions ("Goldamn"), dropped characters ("blakstone"), and doubled characters ("Gooldman") that Smith-Waterman-family matchers cannot. Its only imperfect category is abbreviation (10/12, 83%), where literal substring matches in the 272K corpus outrank the acronym pass for 2 queries ("icag", "bsc"). It returns results for all 197/197 queries.
 
-**Ifrit** is the second-best overall at **88% (134/152)**, with notably strong typo handling at **88% (36/41)** — the best of any non-FuzzyMatch (ED) matcher. It scores 100% on exact name, ISIN, substring, and multi-word categories, and 90% on prefix. Its Bitap algorithm handles many common typos (transpositions, dropped characters) that Smith-Waterman-family matchers miss. Its weaknesses are abbreviation (1/12, 8%) and the significant performance penalty (~136x slower than FuzzyMatch (ED)).
+**Ifrit** is the second-best overall at **88% (134/152)**, with notably strong typo handling at **88% (36/41)** — the best of any non-FuzzyMatch (ED) matcher. It scores 100% on exact name, ISIN, substring, and multi-word categories, and 90% on prefix. Its Bitap algorithm handles many common typos (transpositions, dropped characters) that Smith-Waterman-family matchers miss. Its weaknesses are abbreviation (1/12, 8%) and the significant performance penalty (~160x slower than FuzzyMatch (ED)).
 
-**FuzzyMatch (SW)** scores **85% (129/152)**, trading typo tolerance for higher throughput (44M vs 26M candidates/sec). It agrees with nucleo 92% of the time (182/197) — expected since both use Smith-Waterman-family algorithms. It achieves **100% on abbreviation** (12/12 top-5) thanks to the shared acronym pass, but drops to 56% on typos (vs 100%) due to lacking edit distance. It misses 10 queries entirely (no results) where FuzzyMatch (ED)'s Damerau-Levenshtein fallback succeeds.
+**FuzzyMatch (SW)** scores **84% (129/152)**, trading typo tolerance for higher throughput (61M vs 31M candidates/sec). It agrees with nucleo 92% of the time (182/197) — expected since both use Smith-Waterman-family algorithms. It achieves **100% on abbreviation** (12/12 top-5) thanks to the shared acronym pass, but drops to 56% on typos (vs 100%) due to lacking edit distance. It misses 10 queries entirely (no results) where FuzzyMatch (ED)'s Damerau-Levenshtein fallback succeeds.
 
-**fzf** scores **83% (126/152)**. It matches FuzzyMatch (ED) on prefix (21/21) and substring (22/22), but its lack of edit-distance-based typo tolerance limits it to **54% (22/41)** on typo queries — the lowest of any matcher. 11 typo queries return no results at all. Abbreviation handling (6/12, 50%) is moderate.
+**fzf** scores **82% (126/152)**. It matches FuzzyMatch (ED) on prefix (21/21) and substring (22/22), but its lack of edit-distance-based typo tolerance limits it to **53% (22/41)** on typo queries — the lowest of any matcher. 11 typo queries return no results at all. Abbreviation handling (6/12, 50%) is moderate.
 
-**nucleo** scores **80% (121/152)**. It matches the leaders on exact name, ISIN, and substring (all 100%), but falls to **56% on typos** and only **33% on abbreviations** (4/12). Its lack of length preference means option derivatives often outrank clean equity matches.
+**nucleo** scores **79% (121/152)**. It matches the leaders on exact name, ISIN, and substring (all 100%), but falls to **56% on typos** and only **33% on abbreviations** (4/12). Its lack of length preference means option derivatives often outrank clean equity matches.
 
 **RapidFuzz (WRatio)** returns results for all 197 queries but with low precision. WRatio's combined scoring strategy (ratio + partial_ratio + token variants) produces high scores for many unrelated candidates — match counts are in the millions per category vs thousands for other matchers. Short queries like "MSFT" match "M Macy's" via partial matching, and "isahres" matches "RES RES" instead of iShares.
 
@@ -301,27 +301,29 @@ Results: FuzzyMatch (ED)'s acronym pass finds the correct company for 7/12 abbre
 |---|---|
 | **Machine** | MacBook Pro, Apple M4 Max |
 | **Memory** | 128 GB unified |
-| **OS** | macOS 26.2 (Tahoe) |
-| **Swift** | 6.2.3 |
+| **OS** | macOS 26.3 (Tahoe) |
+| **Swift** | 6.2.4 |
 | **Rust** | 1.93.0 |
 | **Clang** | Apple clang 17.0.0 |
 
-**Benchmark setup**: 197 queries x 271,625 candidates (financial instruments corpus), 5 iterations (3 for RapidFuzz, 1 for Ifrit/Contains), median times reported.
+**Benchmark setup**: 197 queries x 271,625 candidates (financial instruments corpus), 5 iterations (3 for RapidFuzz, 1 for Ifrit/Contains), median times reported. FuzzyMatch numbers use the UTF-8 API (`score(utf8:against:buffer:)`) — the recommended high-performance path.
+
+Note: Ifrit and Contains were not included in this run. Run with `--ifrit --contains` for a full comparison.
 
 ### Per-Category Comparison (median ms)
 
 | Category | nucleo | FuzzyMatch (SW) | FuzzyMatch (ED) | RapidFuzz (Partial) | Contains | RapidFuzz (WRatio) | Ifrit | FuzzyMatch (ED)/nucleo | FuzzyMatch (SW)/nucleo |
 |---|--:|--:|--:|--:|--:|--:|--:|--:|--:|
-| **TOTAL** | 624.3 | 1,215.9 | 2,051.6 | 11,053.6 | 18,581.9 | 35,155.4 | 279,686.5 | 3.3x | 1.9x |
-| exact_symbol | 85.9 | 111.8 | 108.6 | 1,336.8 | 1,659.4 | 5,457.2 | 10,694.7 | 1.3x | 1.3x |
-| exact_name | 107.3 | 209.7 | 522.7 | 1,864.2 | 3,794.4 | 5,844.2 | 81,437.3 | 4.9x | 2.0x |
-| exact_isin | 10.7 | 20.7 | 36.8 | 389.9 | 357.6 | 1,350.2 | 9,842.6 | 3.4x | 1.9x |
-| prefix | 116.5 | 259.0 | 384.2 | 1,934.0 | 3,100.5 | 6,490.5 | 22,094.8 | 3.3x | 2.2x |
-| typo | 135.0 | 265.8 | 546.0 | 2,348.1 | 4,372.4 | 7,849.3 | 68,185.3 | 4.0x | 2.0x |
-| substring | 76.4 | 157.8 | 187.2 | 1,378.5 | 2,375.0 | 4,236.3 | 23,627.0 | 2.5x | 2.1x |
-| multi_word | 50.2 | 80.5 | 150.5 | 842.4 | 1,431.6 | 1,990.2 | 53,346.0 | 3.0x | 1.6x |
-| symbol_spaces | 14.1 | 17.1 | 23.5 | 203.0 | 206.5 | 593.8 | 4,051.0 | 1.7x | 1.2x |
-| abbreviation | 35.4 | 100.5 | 89.2 | 743.4 | 1,284.5 | 2,511.3 | 6,354.1 | 2.5x | 2.8x |
+| **TOTAL** | 556.3 | 873.3 | 1,747.0 | 9,486.4 | 18,581.9 | 31,331.2 | 279,686.5 | 3.1x | 1.6x |
+| exact_symbol | 74.4 | 82.2 | 88.0 | 963.2 | 1,659.4 | 3,918.0 | 10,694.7 | 1.2x | 1.1x |
+| exact_name | 94.5 | 158.5 | 440.5 | 1,659.1 | 3,794.4 | 5,203.9 | 81,437.3 | 4.7x | 1.7x |
+| exact_isin | 9.3 | 14.7 | 28.6 | 345.1 | 357.6 | 1,195.3 | 9,842.6 | 3.1x | 1.6x |
+| prefix | 101.1 | 172.6 | 327.9 | 1,679.0 | 3,100.5 | 5,861.5 | 22,094.8 | 3.2x | 1.7x |
+| typo | 119.3 | 191.6 | 463.2 | 2,023.9 | 4,372.4 | 6,830.5 | 68,185.3 | 3.9x | 1.6x |
+| substring | 67.2 | 110.6 | 164.3 | 1,130.2 | 2,375.0 | 3,770.7 | 23,627.0 | 2.4x | 1.6x |
+| multi_word | 43.8 | 59.4 | 124.8 | 817.1 | 1,431.6 | 1,796.9 | 53,346.0 | 2.9x | 1.4x |
+| symbol_spaces | 12.4 | 13.4 | 19.4 | 180.0 | 206.5 | 522.3 | 4,051.0 | 1.6x | 1.1x |
+| abbreviation | 30.9 | 68.0 | 75.7 | 685.4 | 1,284.5 | 2,207.9 | 6,354.1 | 2.5x | 2.2x |
 
 ### Match Counts
 
@@ -343,27 +345,27 @@ Both RapidFuzz scorers produce identical match counts (no prefiltering — every
 
 | | Total (ms) | Throughput (M candidates/sec) |
 |---|--:|--:|
-| **nucleo** (Rust) | 624 | 86M |
-| **FuzzyMatch (SW)** (Swift) | 1,216 | 44M |
-| **FuzzyMatch (ED)** (Swift) | 2,052 | 26M |
-| **RapidFuzz (Partial)** (C++) | 11,054 | 5M |
+| **nucleo** (Rust) | 556 | 97M |
+| **FuzzyMatch (SW)** (Swift) | 873 | 61M |
+| **FuzzyMatch (ED)** (Swift) | 1,747 | 31M |
+| **RapidFuzz (Partial)** (C++) | 9,486 | 6M |
 | **Contains** (Swift) | 18,582 | 3M |
-| **RapidFuzz (WRatio)** (C++) | 35,155 | 2M |
+| **RapidFuzz (WRatio)** (C++) | 31,331 | 2M |
 | **Ifrit** (Swift) | 279,687 | <1M |
 
 ### Analysis
 
-nucleo is **1.3-4.9x faster** than FuzzyMatch (ED) across categories, which is expected given that nucleo uses a Smith-Waterman variant optimized in Rust while FuzzyMatch (ED) performs Damerau-Levenshtein edit distance with DP-optimal alignment scoring. The gap narrows to **1.3x** for exact symbol queries and **1.7x** for symbol-with-spaces queries, and widens to **4.9x** for exact name queries and **4.0x** for typo queries where FuzzyMatch (ED)'s Damerau-Levenshtein scoring overhead dominates.
+nucleo is **1.2-4.7x faster** than FuzzyMatch (ED) across categories, which is expected given that nucleo uses a Smith-Waterman variant optimized in Rust while FuzzyMatch (ED) performs Damerau-Levenshtein edit distance with DP-optimal alignment scoring. The gap narrows to **1.2x** for exact symbol queries and **1.6x** for symbol-with-spaces queries, and widens to **4.7x** for exact name queries and **3.9x** for typo queries where FuzzyMatch (ED)'s Damerau-Levenshtein scoring overhead dominates.
 
-**FuzzyMatch (SW) closes the gap significantly**, completing all 197 queries in **1.22s** (44M candidates/sec) — only **1.9x slower** than nucleo vs FuzzyMatch (ED)'s 3.3x. FuzzyMatch (SW) and nucleo use the same algorithmic family (Smith-Waterman), so the remaining gap is primarily language runtime and implementation differences (Rust vs Swift). FuzzyMatch (SW) match counts are nearly identical to nucleo's across all categories, confirming similar prefilter selectivity. FuzzyMatch (SW) agrees with nucleo on 182/197 top-1 rankings (92%).
+**FuzzyMatch (SW) narrows the gap significantly**, completing all 197 queries in **873ms** (61M candidates/sec) — only **1.6x slower** than nucleo vs FuzzyMatch (ED)'s 3.1x. FuzzyMatch (SW) and nucleo use the same algorithmic family (Smith-Waterman), so the remaining gap is primarily language runtime and implementation differences (Rust vs Swift). FuzzyMatch (SW) match counts are nearly identical to nucleo's across all categories, confirming similar prefilter selectivity. FuzzyMatch (SW) agrees with nucleo on 182/197 top-1 rankings (92%).
 
-RapidFuzz PartialRatio is **~3.2x faster** than WRatio (11.1s vs 35.2s), because it runs a single scoring strategy per candidate rather than four. However, both are still significantly slower than FuzzyMatch (ED) (5.4x and 17.1x respectively) and nucleo (~18x and ~56x), primarily because RapidFuzz has no prefiltering — every candidate receives a full score computation, producing match counts in the millions.
+RapidFuzz PartialRatio is **~3.3x faster** than WRatio (9.5s vs 31.3s), because it runs a single scoring strategy per candidate rather than four. However, both are still significantly slower than FuzzyMatch (ED) (5.4x and 17.9x respectively) and nucleo (~17x and ~56x), primarily because RapidFuzz has no prefiltering — every candidate receives a full score computation, producing match counts in the millions.
 
-**Swift `contains()` baseline** completes in **18.6s** — **~9.1x slower** than FuzzyMatch (ED) and **~15.3x slower** than FuzzyMatch (SW). This is a non-fuzzy literal substring search using `lowercased().contains()`, the simplest approach a developer might reach for. It returns zero matches for typos (4 total across 44 queries) and abbreviations (3 total across 12 queries), illustrating why fuzzy matching exists. Even for the categories where `contains()` does find results (prefix, substring), the match counts are lower than FuzzyMatch (ED)'s because there is no edit distance tolerance.
+**Swift `contains()` baseline** completes in **18.6s** — **~10.6x slower** than FuzzyMatch (ED) and **~21.3x slower** than FuzzyMatch (SW). This is a non-fuzzy literal substring search using `lowercased().contains()`, the simplest approach a developer might reach for. It returns zero matches for typos (4 total across 44 queries) and abbreviations (3 total across 12 queries), illustrating why fuzzy matching exists. Even for the categories where `contains()` does find results (prefix, substring), the match counts are lower than FuzzyMatch (ED)'s because there is no edit distance tolerance.
 
-Ifrit is by far the slowest matcher at **279.7s** total — **~136x slower** than FuzzyMatch (ED) and **~448x slower** than nucleo. Its Bitap algorithm has no prefiltering and performs expensive per-character scoring across the full corpus. Despite being written in Swift like FuzzyMatch (ED), it demonstrates that algorithm and prefiltering strategy matter far more than language choice for fuzzy matching performance. Ifrit's quality is notably good (88% ground truth, second only to FuzzyMatch (ED)), showing that the Bitap algorithm produces high-quality results — the performance cost is the trade-off.
+Ifrit is by far the slowest matcher at **279.7s** total — **~160x slower** than FuzzyMatch (ED) and **~508x slower** than nucleo. Its Bitap algorithm has no prefiltering and performs expensive per-character scoring across the full corpus. Despite being written in Swift like FuzzyMatch (ED), it demonstrates that algorithm and prefiltering strategy matter far more than language choice for fuzzy matching performance. Ifrit's quality is notably good (88% ground truth, second only to FuzzyMatch (ED)), showing that the Bitap algorithm produces high-quality results — the performance cost is the trade-off.
 
-Both FuzzyMatch modes comfortably handle interactive-speed search over the full 272K corpus: FuzzyMatch (SW) completes all 197 queries in ~1.22s and FuzzyMatch (ED) in ~2.05s (nucleo finishes in ~624ms). FuzzyMatch (ED) uses an adaptive bitmask prefilter: strict for short queries (≤3 chars, requiring all query character types present) and relaxed for longer queries (allowing up to `effectiveMaxEditDistance` missing character types). FuzzyMatch (SW) uses strict tolerance 0 (all query character types must appear). Single-character queries use a dedicated fast path that bypasses the full pipeline entirely, performing a single scan with inline boundary detection. This keeps short-query match counts close to nucleo's while still supporting typo tolerance for longer queries in ED mode.
+Both FuzzyMatch modes comfortably handle interactive-speed search over the full 272K corpus: FuzzyMatch (SW) completes all 197 queries in ~873ms and FuzzyMatch (ED) in ~1.75s (nucleo finishes in ~556ms). FuzzyMatch (ED) uses an adaptive bitmask prefilter: strict for short queries (≤3 chars, requiring all query character types present) and relaxed for longer queries (allowing up to `effectiveMaxEditDistance` missing character types). FuzzyMatch (SW) uses strict tolerance 0 (all query character types must appear). Single-character queries use a dedicated fast path that bypasses the full pipeline entirely, performing a single scan with inline boundary detection. This keeps short-query match counts close to nucleo's while still supporting typo tolerance for longer queries in ED mode.
 
 ### Mode Selection Guidance
 
@@ -371,8 +373,8 @@ Both FuzzyMatch modes comfortably handle interactive-speed search over the full 
 |----------|-------------|-----|
 | User-facing search with typo tolerance | **FuzzyMatch (ED)** | Damerau-Levenshtein handles transpositions; 197/197 coverage |
 | Progressive typing / autocomplete | **FuzzyMatch (ED)** | Explicit prefix scoring; short-query optimization |
-| Multi-word product search | **FuzzyMatch (SW)** | AND semantics; 1.7x faster than FuzzyMatch (ED) |
-| Maximum throughput | **FuzzyMatch (SW)** | 44M/sec vs 26M/sec for FuzzyMatch (ED) |
+| Multi-word product search | **FuzzyMatch (SW)** | AND semantics; 2.0x faster than FuzzyMatch (ED) |
+| Maximum throughput | **FuzzyMatch (SW)** | 61M/sec vs 31M/sec for FuzzyMatch (ED) |
 | nucleo-compatible rankings | **FuzzyMatch (SW)** | 182/197 top-1 agreement |
 | Code/file search | **FuzzyMatch (SW)** | Boundary bonuses match editor conventions |
 
@@ -382,6 +384,6 @@ See [MATCHING_MODES.md](MATCHING_MODES.md) for detailed algorithm comparison and
 
 1. **Abbreviation queries**: FuzzyMatch (ED)'s acronym pass finds 10/12 abbreviation targets in the top-5, outperforming nucleo (4/12) and fzf (6/12). At top-1 it finds 7/12 correctly. The 2 top-5 failures ("icag", "ssc") involve candidates where a different match with the query as a literal substring outranks the acronym target, or where the target company's name structure doesn't produce matching initials in the corpus data.
 2. **nucleo ranking divergence**: nucleo doesn't apply length preferences, so it often ranks longer option tickers (which contain the exact symbol as a prefix) alongside or above the clean equity match. This is a deliberate design choice in nucleo, not a bug.
-3. **RapidFuzz scorer choice**: Neither WRatio nor PartialRatio is well-suited to this workload. WRatio is slower (4 strategies per candidate) but has better top-1 agreement (85/197 vs 40/197 with FuzzyMatch (ED)). PartialRatio is 3.3x faster but less precise, especially on short queries and multi-word queries where token reordering matters. The fundamental issue is RapidFuzz's lack of prefiltering — all 272K candidates are scored regardless of relevance, producing millions of matches.
-4. **RapidFuzz scorer instability**: The two RapidFuzz scorers agree with each other only 56/197 times, making scorer selection the single largest factor in ranking quality. A third scorer (`CachedRatio` — simple normalized Levenshtein) would penalize length differences too heavily for this corpus where short queries match long instrument names.
-5. **Ifrit performance vs quality trade-off**: Ifrit is ~136x slower than FuzzyMatch (ED) despite both being Swift libraries, primarily due to its lack of prefiltering — every candidate is scored with the full Bitap algorithm. However, its quality is the second-best overall at 88% ground truth accuracy (vs FuzzyMatch (ED)'s 99%), with notably strong typo handling (88%) — better than all other non-FuzzyMatch (ED) matchers. Its Bitap algorithm produces high-quality results; the trade-off is purely in performance.
+3. **RapidFuzz scorer choice**: Neither WRatio nor PartialRatio is well-suited to this workload. WRatio is slower (4 strategies per candidate) but has better top-1 agreement (84/197 vs 40/197 with FuzzyMatch (ED)). PartialRatio is 3.3x faster but less precise, especially on short queries and multi-word queries where token reordering matters. The fundamental issue is RapidFuzz's lack of prefiltering — all 272K candidates are scored regardless of relevance, producing millions of matches.
+4. **RapidFuzz scorer instability**: The two RapidFuzz scorers agree with each other only 55/197 times, making scorer selection the single largest factor in ranking quality. A third scorer (`CachedRatio` — simple normalized Levenshtein) would penalize length differences too heavily for this corpus where short queries match long instrument names.
+5. **Ifrit performance vs quality trade-off**: Ifrit is ~160x slower than FuzzyMatch (ED) despite both being Swift libraries, primarily due to its lack of prefiltering — every candidate is scored with the full Bitap algorithm. However, its quality is the second-best overall at 88% ground truth accuracy (vs FuzzyMatch (ED)'s 98%), with notably strong typo handling (88%) — better than all other non-FuzzyMatch (ED) matchers. Its Bitap algorithm produces high-quality results; the trade-off is purely in performance.

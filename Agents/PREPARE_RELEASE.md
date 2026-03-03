@@ -22,10 +22,14 @@ When asked to "prepare release", execute the following steps. **All benchmarks a
    ```bash
    bash Comparison/run-benchmarks.sh --fm-ed --skip-build
    bash Comparison/run-benchmarks.sh --fm-sw --skip-build
+   bash Comparison/run-benchmarks.sh --fm-ed-utf8 --skip-build
+   bash Comparison/run-benchmarks.sh --fm-sw-utf8 --skip-build
    bash Comparison/run-benchmarks.sh --nucleo --skip-build
    bash Comparison/run-benchmarks.sh --rf-wratio --skip-build
    bash Comparison/run-benchmarks.sh --rf-partial --skip-build
    ```
+
+   The UTF-8 API benchmarks (`--fm-ed-utf8`, `--fm-sw-utf8`) measure the `score(utf8:against:buffer:)` hot path, which is the recommended API for maximum throughput. Use these numbers as the primary FuzzyMatch performance figures in COMPARISON.md and README.md.
 
    **Quality comparison** (run in sequence, one at a time):
    ```bash
@@ -39,8 +43,10 @@ When asked to "prepare release", execute the following steps. **All benchmarks a
 
    Each process must complete before the next one starts. Do NOT use parallel subagents for benchmark or quality runs. Documentation review (steps 7-9) should wait until all benchmarks and quality runs are finished.
 
-   **Output files**: After parallel runs complete, results are available in `/tmp/`:
-   - Performance: `/tmp/bench-fuzzymatch-latest.txt`, `/tmp/bench-fuzzymatch-sw-latest.txt`, `/tmp/bench-nucleo-latest.txt`, `/tmp/bench-rapidfuzz-wratio-latest.txt`, `/tmp/bench-rapidfuzz-partial-latest.txt`
+   **Output files**: After runs complete, results are available in `/tmp/`:
+   - Performance (String API): `/tmp/bench-fuzzymatch-latest.txt`, `/tmp/bench-fuzzymatch-sw-latest.txt`
+   - Performance (UTF-8 API): `/tmp/bench-fuzzymatch-ed-utf8-latest.txt`, `/tmp/bench-fuzzymatch-sw-utf8-latest.txt`
+   - Performance (other): `/tmp/bench-nucleo-latest.txt`, `/tmp/bench-rapidfuzz-wratio-latest.txt`, `/tmp/bench-rapidfuzz-partial-latest.txt`
    - Quality: `/tmp/quality-fuzzymatch-latest.json`, `/tmp/quality-fuzzymatch-sw-latest.json`, `/tmp/quality-nucleo-latest.json`, `/tmp/quality-rapidfuzz-wratio-latest.json`, `/tmp/quality-rapidfuzz-partial-latest.json`, `/tmp/quality-fzf-latest.json`
 
    Read these files to collate results for COMPARISON.md — do not re-run all matchers together just to generate the comparison table.
