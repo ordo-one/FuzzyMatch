@@ -217,8 +217,11 @@ private func matchWorker(
 
     for await chunk in input {
         var matched: [String] = []
-        for line in chunk.lines {
-            if matcher.score(line, against: query, buffer: &buffer) != nil {
+        for var line in chunk.lines {
+            let isMatch = line.withUTF8 { utf8 in
+                matcher.score(utf8: utf8, against: query, buffer: &buffer) != nil
+            }
+            if isMatch {
                 matched.append(line)
             }
         }

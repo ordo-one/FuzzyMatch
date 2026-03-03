@@ -188,7 +188,7 @@ struct CombiningMarkTests {
         let candidate = "ha\u{0308}llo_world"
         let originalBytes = Array(candidate.utf8)
         let mask = computeBoundaryMaskCompressed(
-            originalBytes: originalBytes.span,
+            originalBytes: originalBytes,
             isASCII: false
         )
         // Position 0 should be a boundary (start of string)
@@ -203,7 +203,7 @@ struct CombiningMarkTests {
         // Compressed: "aBcd" — should have camelCase boundary at position 1 (a→B)
         let bytes = Array("a\u{0301}Bcd".utf8)
         let mask = computeBoundaryMaskCompressed(
-            originalBytes: bytes.span,
+            originalBytes: bytes,
             isASCII: false
         )
         // Position 0: boundary (start of string)

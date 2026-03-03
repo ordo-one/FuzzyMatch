@@ -1,9 +1,9 @@
-// swift-tools-version: 6.2
+// swift-tools-version: 6.0
 import PackageDescription
 
 let package = Package(
     name: "bench-fuzzymatch",
-    platforms: [.macOS(.v26)],
+    platforms: [.macOS(.v14)],
     dependencies: [
         .package(path: "../.."),
         .package(url: "https://github.com/apple/swift-collections.git", from: "1.1.0"),

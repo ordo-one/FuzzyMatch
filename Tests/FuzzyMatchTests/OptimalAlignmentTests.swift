@@ -22,12 +22,12 @@ private func runAlignment(
     candidate: [UInt8],
     config: EditDistanceConfig = EditDistanceConfig()
 ) -> (positionCount: Int, bonus: Double, positions: [Int]) {
-    let boundaryMask = computeBoundaryMask(bytes: candidate.span)
+    let boundaryMask = computeBoundaryMask(bytes: candidate)
     var positions = [Int](repeating: 0, count: query.count)
     var state = AlignmentState(maxQueryLength: query.count, maxCandidateLength: candidate.count)
     let result = optimalAlignment(
-        query: query.span,
-        candidate: candidate.span,
+        query: query,
+        candidate: candidate,
         boundaryMask: boundaryMask,
         positions: &positions,
         state: &state,
@@ -124,13 +124,13 @@ private func runAlignment(
     for testCase in cases {
         let query = Array(testCase.query.utf8)
         let candidate = Array(testCase.candidate.utf8)
-        let boundaryMask = computeBoundaryMask(bytes: candidate.span)
+        let boundaryMask = computeBoundaryMask(bytes: candidate)
 
         // Greedy
         var greedyPositions = [Int](repeating: 0, count: query.count)
         let greedyCount = findMatchPositions(
-            query: query.span,
-            candidate: candidate.span,
+            query: query,
+            candidate: candidate,
             boundaryMask: boundaryMask,
             positions: &greedyPositions
         )
@@ -140,7 +140,7 @@ private func runAlignment(
             greedyBonus = calculateBonuses(
                 matchPositions: greedyPositions,
                 positionCount: greedyCount,
-                candidateBytes: candidate.span,
+                candidateBytes: candidate,
                 boundaryMask: boundaryMask,
                 config: config
             )

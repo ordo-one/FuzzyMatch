@@ -247,6 +247,76 @@ let benchmarks: @Sendable () -> Void = {
         }
     }
 
+    // MARK: - Aggregate Benchmarks (UTF-8 API)
+
+    Benchmark(
+        "ED - all queries (UTF-8)",
+        configuration: .init(
+            metrics: [.instructions, .mallocCountTotal, .objectAllocCount, .retainCount, .releaseCount],
+            warmupIterations: 1,
+            scalingFactor: .mega
+        )
+    ) { benchmark in
+        let queries = holder.allQueries
+        let matcher = FuzzyMatcher()
+        var buffer = matcher.makeBuffer()
+
+        let prepared = queries.map { matcher.prepare($0.text) }
+        let pools = queries.map { holder.candidates(for: $0.field) }
+
+        let candidateCount = pools[0].count
+        var qi = 0
+        var ci = 0
+        for _ in benchmark.scaledIterations {
+            var c = pools[qi][ci]
+            c.withUTF8 { utf8 in
+                blackHole(matcher.score(utf8: utf8, against: prepared[qi], buffer: &buffer))
+            }
+            ci &+= 1
+            if ci >= candidateCount {
+                ci = 0
+                qi &+= 1
+                if qi >= prepared.count {
+                    qi = 0
+                }
+            }
+        }
+    }
+
+    Benchmark(
+        "SW - all queries (UTF-8)",
+        configuration: .init(
+            metrics: [.instructions, .mallocCountTotal, .objectAllocCount, .retainCount, .releaseCount],
+            warmupIterations: 1,
+            scalingFactor: .mega
+        )
+    ) { benchmark in
+        let queries = holder.allQueries
+        let matcher = FuzzyMatcher(config: .smithWaterman)
+        var buffer = matcher.makeBuffer()
+
+        let prepared = queries.map { matcher.prepare($0.text) }
+        let pools = queries.map { holder.candidates(for: $0.field) }
+
+        let candidateCount = pools[0].count
+        var qi = 0
+        var ci = 0
+        for _ in benchmark.scaledIterations {
+            var c = pools[qi][ci]
+            c.withUTF8 { utf8 in
+                blackHole(matcher.score(utf8: utf8, against: prepared[qi], buffer: &buffer))
+            }
+            ci &+= 1
+            if ci >= candidateCount {
+                ci = 0
+                qi &+= 1
+                if qi >= prepared.count {
+                    qi = 0
+                }
+            }
+        }
+    }
+
     Benchmark(
         "SW - all queries",
         configuration: .init(

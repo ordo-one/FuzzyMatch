@@ -9,6 +9,8 @@ QUERIES_PATH="$REPO_ROOT/Resources/queries.tsv"
 # --- Parse flags ---
 RUN_FM_ED=false
 RUN_FM_SW=false
+RUN_FM_ED_UTF8=false
+RUN_FM_SW_UTF8=false
 RUN_NUCLEO=false
 RUN_RF_WR=false
 RUN_RF_PR=false
@@ -23,6 +25,8 @@ while [[ $# -gt 0 ]]; do
         --fm)      RUN_FM_ED=true; RUN_FM_SW=true; ANY_FLAG=true; shift ;;
         --fm-ed)   RUN_FM_ED=true; ANY_FLAG=true; shift ;;
         --fm-sw)   RUN_FM_SW=true; ANY_FLAG=true; shift ;;
+        --fm-ed-utf8) RUN_FM_ED_UTF8=true; ANY_FLAG=true; shift ;;
+        --fm-sw-utf8) RUN_FM_SW_UTF8=true; ANY_FLAG=true; shift ;;
         --nucleo)  RUN_NUCLEO=true; ANY_FLAG=true; shift ;;
         --rf)      RUN_RF_WR=true; RUN_RF_PR=true; ANY_FLAG=true; shift ;;
         --rf-wratio)  RUN_RF_WR=true; ANY_FLAG=true; shift ;;
@@ -32,11 +36,13 @@ while [[ $# -gt 0 ]]; do
         --iterations) ITERATIONS="$2"; shift 2 ;;
         --skip-build) SKIP_BUILD=true; shift ;;
         --help|-h)
-            echo "Usage: $0 [--fm] [--fm-ed] [--fm-sw] [--nucleo] [--rf] [--rf-wratio] [--rf-partial] [--ifrit] [--contains] [--iterations N] [--skip-build]"
-            echo "  Default (no flags): runs FM(ED), FM(SW), nucleo, RapidFuzz. Ifrit and Contains are on-demand only."
-            echo "  --fm           Run FuzzyMatch (both Edit Distance and Smith-Waterman)"
-            echo "  --fm-ed        Run FuzzyMatch (Edit Distance only)"
-            echo "  --fm-sw        Run FuzzyMatch (Smith-Waterman only)"
+            echo "Usage: $0 [--fm] [--fm-ed] [--fm-sw] [--fm-ed-utf8] [--fm-sw-utf8] [--nucleo] [--rf] [--rf-wratio] [--rf-partial] [--ifrit] [--contains] [--iterations N] [--skip-build]"
+            echo "  Default (no flags): runs FM(ED), FM(SW), FM(ED,UTF-8), FM(SW,UTF-8), nucleo, RapidFuzz."
+            echo "  --fm           Run FuzzyMatch (both Edit Distance and Smith-Waterman, String API)"
+            echo "  --fm-ed        Run FuzzyMatch (Edit Distance, String API)"
+            echo "  --fm-sw        Run FuzzyMatch (Smith-Waterman, String API)"
+            echo "  --fm-ed-utf8   Run FuzzyMatch (Edit Distance, UTF-8 API)"
+            echo "  --fm-sw-utf8   Run FuzzyMatch (Smith-Waterman, UTF-8 API)"
             echo "  --nucleo       Run nucleo"
             echo "  --rf           Run RapidFuzz (both WRatio and PartialRatio)"
             echo "  --rf-wratio    Run RapidFuzz WRatio only"
@@ -55,10 +61,12 @@ if [ -n "$ITERATIONS" ]; then
     ITER_ARGS="--iterations $ITERATIONS"
 fi
 
-# Default: run FM, nucleo, RapidFuzz (Ifrit and Contains are on-demand — too slow)
+# Default: run FM (String + UTF-8), nucleo, RapidFuzz (Ifrit and Contains are on-demand — too slow)
 if [ "$ANY_FLAG" = false ]; then
     RUN_FM_ED=true
     RUN_FM_SW=true
+    RUN_FM_ED_UTF8=true
+    RUN_FM_SW_UTF8=true
     RUN_NUCLEO=true
     RUN_RF_WR=true
     RUN_RF_PR=true
@@ -76,6 +84,8 @@ CORPUS_SIZE=$((CORPUS_SIZE - 1))  # subtract header
 ENABLED=""
 $RUN_FM_ED && ENABLED="$ENABLED FuzzyMatch(ED)"
 $RUN_FM_SW && ENABLED="$ENABLED FuzzyMatch(SW)"
+$RUN_FM_ED_UTF8 && ENABLED="$ENABLED FuzzyMatch(ED,UTF-8)"
+$RUN_FM_SW_UTF8 && ENABLED="$ENABLED FuzzyMatch(SW,UTF-8)"
 $RUN_NUCLEO && ENABLED="$ENABLED nucleo"
 $RUN_RF_WR && ENABLED="$ENABLED RF(WRatio)"
 $RUN_RF_PR && ENABLED="$ENABLED RF(Partial)"
@@ -92,7 +102,7 @@ echo ""
 
 # --- Build selected ---
 if [ "$SKIP_BUILD" = false ]; then
-    if $RUN_FM_ED || $RUN_FM_SW; then
+    if $RUN_FM_ED || $RUN_FM_SW || $RUN_FM_ED_UTF8 || $RUN_FM_SW_UTF8; then
         echo "Building FuzzyMatch benchmark (release)..."
         cd "$SCRIPT_DIR/bench-fuzzymatch"
         swift build -c release 2>&1 | tail -1
@@ -172,6 +182,23 @@ if $RUN_FM_SW; then
     echo ""
 fi
 
+FUZZYMATCH_ED_UTF8_OUTPUT=""
+FUZZYMATCH_SW_UTF8_OUTPUT=""
+
+if $RUN_FM_ED_UTF8; then
+    echo "Running FuzzyMatch (Edit Distance, UTF-8)..."
+    FUZZYMATCH_ED_UTF8_OUTPUT=$(cd "$SCRIPT_DIR/bench-fuzzymatch" && swift run -c release bench-fuzzymatch --tsv "$TSV_PATH" --queries "$QUERIES_PATH" --utf8 $ITER_ARGS 2>/dev/null)
+    echo "$FUZZYMATCH_ED_UTF8_OUTPUT" | grep -E "^(Total time|Throughput|Per-query)"
+    echo ""
+fi
+
+if $RUN_FM_SW_UTF8; then
+    echo "Running FuzzyMatch (Smith-Waterman, UTF-8)..."
+    FUZZYMATCH_SW_UTF8_OUTPUT=$(cd "$SCRIPT_DIR/bench-fuzzymatch" && swift run -c release bench-fuzzymatch --tsv "$TSV_PATH" --queries "$QUERIES_PATH" --sw --utf8 $ITER_ARGS 2>/dev/null)
+    echo "$FUZZYMATCH_SW_UTF8_OUTPUT" | grep -E "^(Total time|Throughput|Per-query)"
+    echo ""
+fi
+
 # Contains is very slow — defaults to 1 iteration
 if $RUN_CONTAINS; then
     echo "Running String.contains() baseline (slow — 1 iteration by default)..."
@@ -197,6 +224,12 @@ fi
 if $RUN_FM_SW; then
     echo "$FUZZYMATCH_SW_OUTPUT" > /tmp/bench-fuzzymatch-sw-latest.txt
 fi
+if $RUN_FM_ED_UTF8; then
+    echo "$FUZZYMATCH_ED_UTF8_OUTPUT" > /tmp/bench-fuzzymatch-ed-utf8-latest.txt
+fi
+if $RUN_FM_SW_UTF8; then
+    echo "$FUZZYMATCH_SW_UTF8_OUTPUT" > /tmp/bench-fuzzymatch-sw-utf8-latest.txt
+fi
 if $RUN_NUCLEO; then
     echo "$NUCLEO_OUTPUT" > /tmp/bench-nucleo-latest.txt
 fi
@@ -214,10 +247,10 @@ if $RUN_CONTAINS; then
 fi
 
 # --- Comparison table (only when all are run) ---
-if $RUN_FM_ED && $RUN_NUCLEO && $RUN_RF_WR && $RUN_RF_PR; then
-    # --- Extract metadata from FuzzyMatch output ---
-    NUM_QUERIES=$(echo "$FUZZYMATCH_OUTPUT" | grep "^Running " | sed 's/Running \([0-9]*\) queries/\1/')
-    NUM_ITERATIONS=$(echo "$FUZZYMATCH_OUTPUT" | grep "^Iteration " | tail -1 | sed 's/Iteration \([0-9]*\):.*/\1/')
+if $RUN_FM_ED_UTF8 && $RUN_NUCLEO && $RUN_RF_WR && $RUN_RF_PR; then
+    # --- Extract metadata from FuzzyMatch UTF-8 output ---
+    NUM_QUERIES=$(echo "$FUZZYMATCH_ED_UTF8_OUTPUT" | grep "^Running " | sed 's/Running \([0-9]*\) queries/\1/')
+    NUM_ITERATIONS=$(echo "$FUZZYMATCH_ED_UTF8_OUTPUT" | grep "^Iteration " | tail -1 | sed 's/Iteration \([0-9]*\):.*/\1/')
 
     echo "============================================"
     echo " Comparison Table"
@@ -229,10 +262,10 @@ if $RUN_FM_ED && $RUN_NUCLEO && $RUN_RF_WR && $RUN_RF_PR; then
     echo "  Per iteration: $NUM_QUERIES queries x $CORPUS_SIZE candidates = $(echo "$NUM_QUERIES * $CORPUS_SIZE" | bc) scorings"
     echo ""
 
-    # Build file list for awk — include optional matchers if available
-    AWK_FILES="/tmp/bench-fuzzymatch-latest.txt /tmp/bench-nucleo-latest.txt /tmp/bench-rapidfuzz-wratio-latest.txt /tmp/bench-rapidfuzz-partial-latest.txt"
-    if $RUN_FM_SW; then
-        AWK_FILES="$AWK_FILES /tmp/bench-fuzzymatch-sw-latest.txt"
+    # Build file list for awk — use UTF-8 API outputs (matches COMPARISON.md)
+    AWK_FILES="/tmp/bench-fuzzymatch-ed-utf8-latest.txt /tmp/bench-nucleo-latest.txt /tmp/bench-rapidfuzz-wratio-latest.txt /tmp/bench-rapidfuzz-partial-latest.txt"
+    if $RUN_FM_SW_UTF8; then
+        AWK_FILES="$AWK_FILES /tmp/bench-fuzzymatch-sw-utf8-latest.txt"
     fi
     if $RUN_IFRIT; then
         AWK_FILES="$AWK_FILES /tmp/bench-ifrit-latest.txt"
@@ -241,7 +274,7 @@ if $RUN_FM_ED && $RUN_NUCLEO && $RUN_RF_WR && $RUN_RF_PR; then
         AWK_FILES="$AWK_FILES /tmp/bench-contains-latest.txt"
     fi
 
-    awk -v has_ifrit="$RUN_IFRIT" -v has_sw="$RUN_FM_SW" -v has_contains="$RUN_CONTAINS" '
+    awk -v has_ifrit="$RUN_IFRIT" -v has_sw="$RUN_FM_SW_UTF8" -v has_contains="$RUN_CONTAINS" '
 BEGIN {
     n_cats = split("exact_symbol exact_name exact_isin prefix typo substring multi_word symbol_spaces abbreviation", cats, " ")
 }
@@ -254,11 +287,11 @@ BEGIN {
     if (n >= 2) {
         # parts[2] is like "1725.6ms"
         gsub(/ms.*/, "", parts[2])
-        if (FILENAME == "/tmp/bench-fuzzymatch-latest.txt") fm_total = parts[2] + 0
+        if (FILENAME == "/tmp/bench-fuzzymatch-ed-utf8-latest.txt") fm_total = parts[2] + 0
         else if (FILENAME == "/tmp/bench-nucleo-latest.txt") nuc_total = parts[2] + 0
         else if (FILENAME == "/tmp/bench-rapidfuzz-wratio-latest.txt") rfw_total = parts[2] + 0
         else if (FILENAME == "/tmp/bench-rapidfuzz-partial-latest.txt") rfp_total = parts[2] + 0
-        else if (FILENAME == "/tmp/bench-fuzzymatch-sw-latest.txt") sw_total = parts[2] + 0
+        else if (FILENAME == "/tmp/bench-fuzzymatch-sw-utf8-latest.txt") sw_total = parts[2] + 0
         else if (FILENAME == "/tmp/bench-ifrit-latest.txt") ifrit_total = parts[2] + 0
         else if (FILENAME == "/tmp/bench-contains-latest.txt") cont_total = parts[2] + 0
     }
@@ -268,7 +301,7 @@ BEGIN {
 {
     for (i = 1; i <= n_cats; i++) {
         if ($1 == cats[i] && NF >= 5) {
-            if (FILENAME == "/tmp/bench-fuzzymatch-latest.txt") {
+            if (FILENAME == "/tmp/bench-fuzzymatch-ed-utf8-latest.txt") {
                 fm_med[$1] = $3 + 0
                 fm_matches[$1] = $5
             } else if (FILENAME == "/tmp/bench-nucleo-latest.txt") {
@@ -280,7 +313,7 @@ BEGIN {
             } else if (FILENAME == "/tmp/bench-rapidfuzz-partial-latest.txt") {
                 rfp_med[$1] = $3 + 0
                 rfp_matches[$1] = $5
-            } else if (FILENAME == "/tmp/bench-fuzzymatch-sw-latest.txt") {
+            } else if (FILENAME == "/tmp/bench-fuzzymatch-sw-utf8-latest.txt") {
                 sw_med[$1] = $3 + 0
                 sw_matches[$1] = $5
             } else if (FILENAME == "/tmp/bench-ifrit-latest.txt") {
@@ -366,6 +399,8 @@ echo ""
 echo "Full outputs saved to:"
 $RUN_FM_ED && echo "  /tmp/bench-fuzzymatch-latest.txt"
 $RUN_FM_SW && echo "  /tmp/bench-fuzzymatch-sw-latest.txt"
+$RUN_FM_ED_UTF8 && echo "  /tmp/bench-fuzzymatch-ed-utf8-latest.txt"
+$RUN_FM_SW_UTF8 && echo "  /tmp/bench-fuzzymatch-sw-utf8-latest.txt"
 $RUN_NUCLEO && echo "  /tmp/bench-nucleo-latest.txt"
 $RUN_RF_WR && echo "  /tmp/bench-rapidfuzz-wratio-latest.txt"
 $RUN_RF_PR && echo "  /tmp/bench-rapidfuzz-partial-latest.txt"

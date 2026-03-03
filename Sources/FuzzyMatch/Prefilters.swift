@@ -252,78 +252,85 @@ internal func lowercaseCyrillic(lead: UInt8, second: UInt8) -> (UInt8, UInt8) {
 /// - Returns: The number of bytes written to `destination`.
 @inlinable @discardableResult
 internal func lowercaseUTF8(
-    from source: Span<UInt8>,
+    from source: UnsafeBufferPointer<UInt8>,
     into destination: inout [UInt8],
     isASCII: Bool
 ) -> Int {
     let count = source.count
-    if isASCII {
-        for i in 0..<count {
-            destination[i] = confusableASCIIToCanonical(lowercaseASCII(source[i]))
-        }
-        return count
-    } else {
-        var i = 0
-        var outIdx = 0
-        while i < count {
-            let byte = source[i]
-            // Skip combining diacritical marks (U+0300–U+036F)
-            if i + 1 < count && isCombiningMark(lead: byte, second: source[i + 1]) {
-                i += 2
-            } else if byte == 0xC3 && i + 1 < count {
-                let lowered = lowercaseLatinExtended(source[i + 1])
-                let ascii = latin1ToASCII(lowered)
-                if ascii != 0 {
-                    destination[outIdx] = ascii
-                    outIdx += 1
-                } else {
-                    destination[outIdx] = byte
-                    destination[outIdx + 1] = lowered
-                    outIdx += 2
-                }
-                i += 2
-            } else if (byte == 0xCE || byte == 0xCF) && i + 1 < count {
-                let (newLead, newSecond) = lowercaseGreek(lead: byte, second: source[i + 1])
-                destination[outIdx] = newLead
-                destination[outIdx + 1] = newSecond
-                outIdx += 2
-                i += 2
-            } else if (byte == 0xD0 || byte == 0xD1) && i + 1 < count {
-                let (newLead, newSecond) = lowercaseCyrillic(lead: byte, second: source[i + 1])
-                destination[outIdx] = newLead
-                destination[outIdx + 1] = newSecond
-                outIdx += 2
-                i += 2
-            } else if (byte == 0xC2 || byte == 0xCA) && i + 1 < count {
-                let ascii = confusable2ByteToASCII(lead: byte, second: source[i + 1])
-                if ascii != 0 {
-                    destination[outIdx] = ascii
-                    outIdx += 1
-                } else {
-                    destination[outIdx] = byte
-                    destination[outIdx + 1] = source[i + 1]
-                    outIdx += 2
-                }
-                i += 2
-            } else if byte == 0xE2 && i + 2 < count {
-                let ascii = confusable3ByteToASCII(second: source[i + 1], third: source[i + 2])
-                if ascii != 0 {
-                    destination[outIdx] = ascii
-                    outIdx += 1
-                } else {
-                    destination[outIdx] = byte
-                    destination[outIdx + 1] = source[i + 1]
-                    destination[outIdx + 2] = source[i + 2]
-                    outIdx += 3
-                }
-                i += 3
-            } else {
-                destination[outIdx] = confusableASCIIToCanonical(lowercaseASCII(byte))
-                outIdx += 1
-                i += 1
+    if count == 0 { return 0 }
+    // Use withUnsafeMutableBufferPointer to bypass Array.subscript.modify coroutine
+    // overhead. Each array subscript write normally goes through a yield-once coroutine
+    // with bounds checking; direct pointer writes eliminate this for the O(n) pass.
+    return destination.withUnsafeMutableBufferPointer { destPtr in
+        let dest = destPtr.baseAddress!
+        if isASCII {
+            for i in 0..<count {
+                dest[i] = confusableASCIIToCanonical(lowercaseASCII(source[i]))
             }
+            return count
+        } else {
+            var i = 0
+            var outIdx = 0
+            while i < count {
+                let byte = source[i]
+                // Skip combining diacritical marks (U+0300–U+036F)
+                if i + 1 < count && isCombiningMark(lead: byte, second: source[i + 1]) {
+                    i += 2
+                } else if byte == 0xC3 && i + 1 < count {
+                    let lowered = lowercaseLatinExtended(source[i + 1])
+                    let ascii = latin1ToASCII(lowered)
+                    if ascii != 0 {
+                        dest[outIdx] = ascii
+                        outIdx += 1
+                    } else {
+                        dest[outIdx] = byte
+                        dest[outIdx + 1] = lowered
+                        outIdx += 2
+                    }
+                    i += 2
+                } else if (byte == 0xCE || byte == 0xCF) && i + 1 < count {
+                    let (newLead, newSecond) = lowercaseGreek(lead: byte, second: source[i + 1])
+                    dest[outIdx] = newLead
+                    dest[outIdx + 1] = newSecond
+                    outIdx += 2
+                    i += 2
+                } else if (byte == 0xD0 || byte == 0xD1) && i + 1 < count {
+                    let (newLead, newSecond) = lowercaseCyrillic(lead: byte, second: source[i + 1])
+                    dest[outIdx] = newLead
+                    dest[outIdx + 1] = newSecond
+                    outIdx += 2
+                    i += 2
+                } else if (byte == 0xC2 || byte == 0xCA) && i + 1 < count {
+                    let ascii = confusable2ByteToASCII(lead: byte, second: source[i + 1])
+                    if ascii != 0 {
+                        dest[outIdx] = ascii
+                        outIdx += 1
+                    } else {
+                        dest[outIdx] = byte
+                        dest[outIdx + 1] = source[i + 1]
+                        outIdx += 2
+                    }
+                    i += 2
+                } else if byte == 0xE2 && i + 2 < count {
+                    let ascii = confusable3ByteToASCII(second: source[i + 1], third: source[i + 2])
+                    if ascii != 0 {
+                        dest[outIdx] = ascii
+                        outIdx += 1
+                    } else {
+                        dest[outIdx] = byte
+                        dest[outIdx + 1] = source[i + 1]
+                        dest[outIdx + 2] = source[i + 2]
+                        outIdx += 3
+                    }
+                    i += 3
+                } else {
+                    dest[outIdx] = confusableASCIIToCanonical(lowercaseASCII(byte))
+                    outIdx += 1
+                    i += 1
+                }
+            }
+            return outIdx
         }
-        return outIdx
     }
 }
 
@@ -379,11 +386,11 @@ internal func computeCharBitmask<S: Sequence>(_ bytes: S) -> UInt64 where S.Elem
     return mask
 }
 
-/// Computes a character presence bitmask for a Span of lowercased UTF-8 bytes.
+/// Computes a character presence bitmask for an UnsafeBufferPointer of lowercased UTF-8 bytes.
 ///
-/// This overload works with Swift 6's Span type which doesn't conform to Sequence.
+/// This overload works with UnsafeBufferPointer for direct buffer access.
 @inlinable
-internal func computeCharBitmask(_ bytes: Span<UInt8>) -> UInt64 {
+internal func computeCharBitmask(_ bytes: UnsafeBufferPointer<UInt8>) -> UInt64 {
     var mask: UInt64 = 0
     var i = 0
     while i < bytes.count {
@@ -412,7 +419,7 @@ internal func computeCharBitmask(_ bytes: Span<UInt8>) -> UInt64 {
 /// - Parameter bytes: Raw UTF-8 bytes (not necessarily lowercased).
 /// - Returns: A 64-bit integer with bits set for each present character type.
 @inlinable
-internal func computeCharBitmaskCaseInsensitive(_ bytes: Span<UInt8>) -> UInt64 {
+internal func computeCharBitmaskCaseInsensitive(_ bytes: UnsafeBufferPointer<UInt8>) -> UInt64 {
     var mask: UInt64 = 0
     var i = 0
     while i < bytes.count {
@@ -502,7 +509,7 @@ internal let charBitmaskMask: UInt64 = (UInt64(1) << 37) &- 1
 /// compiler auto-vectorization and adds pipeline overhead that outweighs any savings
 /// from scanning fewer bytes on typical-length candidates (20-50 bytes).
 @inlinable
-internal func computeCharBitmaskWithASCIICheck(_ bytes: Span<UInt8>) -> (mask: UInt64, isASCII: Bool) {
+internal func computeCharBitmaskWithASCIICheck(_ bytes: UnsafeBufferPointer<UInt8>) -> (mask: UInt64, isASCII: Bool) {
     var mask: UInt64 = 0
     for i in 0..<bytes.count {
         mask |= charBitmaskLookup[Int(bytes[i])]

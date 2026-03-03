@@ -68,8 +68,8 @@
 /// ```
 @inlinable
 internal func findMatchPositions(
-    query: Span<UInt8>,
-    candidate: Span<UInt8>,
+    query: UnsafeBufferPointer<UInt8>,
+    candidate: UnsafeBufferPointer<UInt8>,
     boundaryMask: UInt64,
     positions: inout [Int]
 ) -> Int {
@@ -166,8 +166,8 @@ internal func findMatchPositions(
 /// - Returns: A tuple of (positionCount, bonus) or (0, 0.0) if no alignment found.
 @inlinable
 internal func optimalAlignment(
-    query: Span<UInt8>,
-    candidate: Span<UInt8>,
+    query: UnsafeBufferPointer<UInt8>,
+    candidate: UnsafeBufferPointer<UInt8>,
     boundaryMask: UInt64,
     positions: inout [Int],
     state: inout AlignmentState,
@@ -414,7 +414,7 @@ internal func optimalAlignment(
 internal func calculateBonuses(
     matchPositions: [Int],
     positionCount: Int,
-    candidateBytes: Span<UInt8>,
+    candidateBytes: UnsafeBufferPointer<UInt8>,
     boundaryMask: UInt64,
     config: EditDistanceConfig
 ) -> Double {
@@ -487,8 +487,8 @@ internal func calculateBonuses(
 /// - Returns: The start index of the best contiguous match, or -1 if none found.
 @inlinable
 internal func findContiguousSubstring(
-    query: Span<UInt8>,
-    candidate: Span<UInt8>,
+    query: UnsafeBufferPointer<UInt8>,
+    candidate: UnsafeBufferPointer<UInt8>,
     boundaryMask: UInt64
 ) -> Int {
     let qLen = query.count

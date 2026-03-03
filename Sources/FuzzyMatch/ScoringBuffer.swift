@@ -13,7 +13,7 @@
 
 /// Storage for lowercased candidate bytes and precomputed per-position bonus values.
 ///
-/// Separated into its own struct to allow Span borrowing without conflicting
+/// Separated into its own struct to allow buffer borrowing without conflicting
 /// with mutation of other scoring state.
 @usableFromInline
 internal struct CandidateStorage: Sendable {
@@ -36,6 +36,45 @@ internal struct CandidateStorage: Sendable {
         if bytes.count < length {
             bytes = [UInt8](repeating: 0, count: length)
             bonus = [Int32](repeating: 0, count: length)
+        }
+    }
+
+    /// Provides immutable buffer pointer access to both `bytes` and `bonus` simultaneously.
+    ///
+    /// Non-mutating read-only counterpart to ``withMutableBuffers``.
+    /// Must be a method on `self` so Swift sees disjoint access to stored properties
+    /// (calling `bytes.withUnsafeBufferPointer` then `bonus.withUnsafeBufferPointer`
+    /// from outside would trigger an overlapping-access error on the struct).
+    @inlinable
+    func withReadBuffers<R>(
+        length: Int,
+        _ body: (UnsafeBufferPointer<UInt8>, UnsafeBufferPointer<Int32>) -> R
+    ) -> R {
+        bytes.withUnsafeBufferPointer { bytesPtr in
+            bonus.withUnsafeBufferPointer { bonusPtr in
+                body(
+                    UnsafeBufferPointer(rebasing: bytesPtr[0..<length]),
+                    UnsafeBufferPointer(rebasing: bonusPtr[0..<length])
+                )
+            }
+        }
+    }
+
+    /// Provides mutable raw pointer access to both `bytes` and `bonus` simultaneously.
+    ///
+    /// Eliminates `Array.subscript.modify` coroutine overhead in hot loops where
+    /// bounds checking has already been guaranteed by `ensureCapacity`.
+    /// Must be a method on `self` so Swift sees disjoint access to stored properties
+    /// (calling `bytes.withUnsafeMutableBufferPointer` then `bonus.withUnsafeMutableBufferPointer`
+    /// from outside would trigger an overlapping-access error on the struct).
+    @inlinable
+    mutating func withMutableBuffers<R>(
+        _ body: (UnsafeMutablePointer<UInt8>, UnsafeMutablePointer<Int32>) -> R
+    ) -> R {
+        bytes.withUnsafeMutableBufferPointer { bytesPtr in
+            bonus.withUnsafeMutableBufferPointer { bonusPtr in
+                body(bytesPtr.baseAddress!, bonusPtr.baseAddress!)
+            }
         }
     }
 }

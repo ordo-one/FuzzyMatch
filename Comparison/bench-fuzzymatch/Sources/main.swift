@@ -1,3 +1,4 @@
+import Dispatch
 import FuzzyMatch
 import Foundation
 import HeapModule
@@ -43,7 +44,8 @@ struct App {
 
         let matchConfig: MatchConfig = config.useSmithWaterman ? .smithWaterman : MatchConfig()
         let matcher = FuzzyMatcher(config: matchConfig)
-        let modeName = config.useSmithWaterman ? "Smith-Waterman" : "Edit Distance"
+        let utf8Suffix = config.useUTF8 ? ", UTF-8" : ""
+        let modeName = config.useSmithWaterman ? "Smith-Waterman\(utf8Suffix)" : "Edit Distance\(utf8Suffix)"
 
         let symbolCandidates = instruments.map(\.symbol)
         let nameCandidates = instruments.map(\.name)
@@ -66,8 +68,17 @@ struct App {
             for q in queries {
                 let prepared = matcher.prepare(q.text)
                 let pool = candidates(for: q.field)
-                for candidate in pool {
-                    _ = matcher.score(candidate, against: prepared, buffer: &buffer)
+                if config.useUTF8 {
+                    for candidate in pool {
+                        var c = candidate
+                        c.withUTF8 { utf8 in
+                            _ = matcher.score(utf8: utf8, against: prepared, buffer: &buffer)
+                        }
+                    }
+                } else {
+                    for candidate in pool {
+                        _ = matcher.score(candidate, against: prepared, buffer: &buffer)
+                    }
                 }
             }
             print("Warmup complete")
@@ -90,7 +101,7 @@ struct App {
                 let pool = candidates(for: q.field)
                 let prepared = matcher.prepare(q.text)
                 let qStart = now()
-                let (matchCount, _) = scoreQuery(matcher: matcher, prepared: prepared, buffer: &buffer, candidates: pool)
+                let (matchCount, _) = scoreQuery(matcher: matcher, prepared: prepared, buffer: &buffer, candidates: pool, useUTF8: config.useUTF8)
                 let qEnd = now()
                 queryTimingsMs[qi].append(msFrom(qStart, to: qEnd))
                 if iter == 0 {
@@ -119,13 +130,23 @@ struct App {
         matcher: FuzzyMatcher,
         prepared: FuzzyQuery,
         buffer: inout ScoringBuffer,
-        candidates: [String]
+        candidates: [String],
+        useUTF8: Bool = false
     ) -> (matchCount: Int, top: [ScoredResult]) {
         var matchCount = 0
         var heap = Heap<ScoredResult>()
 
         for (ci, candidate) in candidates.enumerated() {
-            if let match = matcher.score(candidate, against: prepared, buffer: &buffer) {
+            let match: ScoredMatch?
+            if useUTF8 {
+                var c = candidate
+                match = c.withUTF8 { utf8 in
+                    matcher.score(utf8: utf8, against: prepared, buffer: &buffer)
+                }
+            } else {
+                match = matcher.score(candidate, against: prepared, buffer: &buffer)
+            }
+            if let match {
                 matchCount += 1
                 heap.insert(ScoredResult(score: match.score, index: ci))
                 if heap.count > topK {
@@ -149,6 +170,7 @@ struct App {
         let queriesPath: String
         let iterations: Int
         let useSmithWaterman: Bool
+        let useUTF8: Bool
     }
 
     static func parseArgs() -> Config {
@@ -157,7 +179,8 @@ struct App {
         let queriesPath = argValue(for: "--queries", in: args) ?? "../../Resources/queries.tsv"
         let iterations = argValue(for: "--iterations", in: args).flatMap(Int.init) ?? 5
         let useSmithWaterman = args.contains("--sw")
-        return Config(tsvPath: tsvPath, queriesPath: queriesPath, iterations: max(1, iterations), useSmithWaterman: useSmithWaterman)
+        let useUTF8 = args.contains("--utf8")
+        return Config(tsvPath: tsvPath, queriesPath: queriesPath, iterations: max(1, iterations), useSmithWaterman: useSmithWaterman, useUTF8: useUTF8)
     }
 
     static func argValue(for flag: String, in args: [String]) -> String? {
@@ -179,7 +202,7 @@ struct App {
 
     static func loadCorpus(from path: String) -> [Instrument] {
         print("Loading corpus from \(path)...", terminator: "")
-        fflush(stdout)
+        fflush(nil)
         let data = try! Data(contentsOf: URL(fileURLWithPath: path))
         let content = String(decoding: data, as: UTF8.self)
         print(" done (\(data.count) bytes)")
@@ -201,7 +224,7 @@ struct App {
     // MARK: - Timing
 
     static func now() -> UInt64 {
-        clock_gettime_nsec_np(CLOCK_UPTIME_RAW)
+        DispatchTime.now().uptimeNanoseconds
     }
 
     static func msFrom(_ start: UInt64, to end: UInt64) -> Double {

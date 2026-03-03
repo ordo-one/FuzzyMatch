@@ -6,7 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 FuzzyMatcher is a high-performance fuzzy string matching library for Swift. It provides two matching modes — **Damerau-Levenshtein edit distance** (default, penalty-driven) and **Smith-Waterman local alignment** (bonus-driven) — both with multi-stage prefiltering and zero-allocation hot paths.
 
-**Requirements:** Swift 6.2+, macOS 26+
+**Requirements:** Swift 6.0+, macOS 14+
+
+> **Note:** When the project moves up to require Swift 6.2, run the `Agents/SPANS_MIGRATION.md` migration guide to restore Span usage for improved memory safety.
 
 ## Build Commands
 
@@ -52,13 +54,22 @@ The library follows a pipeline architecture:
 
 `FuzzyMatcher.swift` orchestrates the edit distance scoring pipeline via decomposed phase methods (`checkExactMatch`, `scorePrefix`, `scoreSubstring`, `scoreSubsequence`, `scoreAcronym`) coordinated through a `ScoringState` struct. `FuzzyMatcher+SmithWaterman.swift` handles Smith-Waterman scoring with a single DP pass and optional atom splitting. `FuzzyMatcher+Convenience.swift` provides convenience wrappers. The `score(_:against:buffer:)` method dispatches to the appropriate implementation based on `MatchConfig.algorithm`.
 
-**High-performance API** (zero allocations — use for hot paths):
+**UTF-8 API** (highest throughput — enables cross-module inlining):
 ```swift
-// Edit distance (default)
 let matcher = FuzzyMatcher()
-// Smith-Waterman mode
-let swMatcher = FuzzyMatcher(config: .smithWaterman)
+let query = matcher.prepare("searchTerm")
+var buffer = matcher.makeBuffer()
+var candidate = "someCandidate"
+candidate.withUTF8 { utf8 in
+    if let match = matcher.score(utf8: utf8, against: query, buffer: &buffer) { ... }
+}
+```
 
+> **Note:** On Swift 6.0, `String.withUTF8` is non-inlinable, preventing cross-module optimization for the String API. The `score(utf8:against:buffer:)` method is `@inlinable` and bypasses this limitation, delivering ~60% higher throughput. This gap will be resolved when the library adopts Swift 6.2+ Span.
+
+**String API** (zero allocations — high performance for callers with String inputs):
+```swift
+let matcher = FuzzyMatcher()
 let query = matcher.prepare("searchTerm")
 var buffer = matcher.makeBuffer()
 if let match = matcher.score(candidate, against: query, buffer: &buffer) { ... }

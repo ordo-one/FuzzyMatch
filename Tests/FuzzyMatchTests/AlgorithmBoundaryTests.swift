@@ -179,7 +179,7 @@ import Testing
     let candidate = String(repeating: "a", count: 63) + "Bc"
     let bytes = Array(candidate.utf8)  // Keep original case for boundary detection
 
-    let mask = computeBoundaryMask(bytes: bytes.span)
+    let mask = computeBoundaryMask(bytes: bytes)
 
     // Position 0 should be boundary (start)
     #expect((mask & (1 << 0)) != 0)
@@ -194,11 +194,11 @@ import Testing
     let bytes = Array(candidate.utf8)
 
     // Position 70 is uppercase B after lowercase a - should be boundary
-    let isBoundary = isWordBoundary(at: 70, in: bytes.span)
+    let isBoundary = isWordBoundary(at: 70, in: bytes)
     #expect(isBoundary)
 
     // Position 71 is lowercase c after B - not a boundary
-    let notBoundary = isWordBoundary(at: 71, in: bytes.span)
+    let notBoundary = isWordBoundary(at: 71, in: bytes)
     #expect(!notBoundary)
 }
 
@@ -331,12 +331,7 @@ import Testing
     let candidate: [UInt8] = Array(candidateStr.utf8)
     var state = EditDistanceState(maxQueryLength: query.count)
 
-    let distance = prefixEditDistance(
-        query: query.span,
-        candidate: candidate.span,
-        state: &state,
-        maxEditDistance: 3
-    )
+    let distance = prefixEditDistance(query: query, candidate: candidate, state: &state, maxEditDistance: 3)
 
     #expect(distance == 1, "Single substitution in 2K string should have distance 1")
 }
@@ -393,12 +388,7 @@ import Testing
     let candidate: [UInt8] = Array(String(repeating: "a", count: 32).utf8)
     var state = EditDistanceState(maxQueryLength: query.count)
 
-    let distance = prefixEditDistance(
-        query: query.span,
-        candidate: candidate.span,
-        state: &state,
-        maxEditDistance: 3
-    )
+    let distance = prefixEditDistance(query: query, candidate: candidate, state: &state, maxEditDistance: 3)
 
     #expect(distance == 0)
 }
@@ -408,12 +398,7 @@ import Testing
     let candidate: [UInt8] = Array(String(repeating: "a", count: 64).utf8)
     var state = EditDistanceState(maxQueryLength: query.count)
 
-    let distance = prefixEditDistance(
-        query: query.span,
-        candidate: candidate.span,
-        state: &state,
-        maxEditDistance: 3
-    )
+    let distance = prefixEditDistance(query: query, candidate: candidate, state: &state, maxEditDistance: 3)
 
     #expect(distance == 0)
 }
@@ -423,12 +408,7 @@ import Testing
     let candidate: [UInt8] = Array(String(repeating: "a", count: 65).utf8)
     var state = EditDistanceState(maxQueryLength: query.count)
 
-    let distance = prefixEditDistance(
-        query: query.span,
-        candidate: candidate.span,
-        state: &state,
-        maxEditDistance: 3
-    )
+    let distance = prefixEditDistance(query: query, candidate: candidate, state: &state, maxEditDistance: 3)
 
     #expect(distance == 0)
 }

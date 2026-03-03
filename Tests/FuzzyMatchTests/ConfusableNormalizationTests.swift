@@ -416,7 +416,7 @@ import Testing
     // Candidate with curly quote should not be rejected by bitmask prefilter
     // when query has ASCII apostrophe (both map to 0 in bitmask, so no false rejection)
     let candidateBytes = Array("it\u{2019}s".utf8)
-    let (candidateMask, _) = computeCharBitmaskWithASCIICheck(candidateBytes.span)
+    let (candidateMask, _) = computeCharBitmaskWithASCIICheck(candidateBytes)
     let matcher = FuzzyMatcher()
     let query = matcher.prepare("it's")
     #expect(passesCharBitmask(queryMask: query.charBitmask, candidateMask: candidateMask, maxEditDistance: 0))
@@ -424,7 +424,7 @@ import Testing
 
 @Test func bitmaskEnDashNotFalselyRejected() {
     let candidateBytes = Array("well\u{2013}known".utf8)
-    let (candidateMask, _) = computeCharBitmaskWithASCIICheck(candidateBytes.span)
+    let (candidateMask, _) = computeCharBitmaskWithASCIICheck(candidateBytes)
     let matcher = FuzzyMatcher()
     let query = matcher.prepare("well-known")
     #expect(passesCharBitmask(queryMask: query.charBitmask, candidateMask: candidateMask, maxEditDistance: 0))
@@ -432,7 +432,7 @@ import Testing
 
 @Test func bitmaskNBSPNotFalselyRejected() {
     let candidateBytes = Array("hello\u{00A0}world".utf8)
-    let (candidateMask, _) = computeCharBitmaskWithASCIICheck(candidateBytes.span)
+    let (candidateMask, _) = computeCharBitmaskWithASCIICheck(candidateBytes)
     let matcher = FuzzyMatcher()
     let query = matcher.prepare("hello world")
     #expect(passesCharBitmask(queryMask: query.charBitmask, candidateMask: candidateMask, maxEditDistance: 0))

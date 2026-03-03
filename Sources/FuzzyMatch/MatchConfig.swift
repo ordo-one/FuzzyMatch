@@ -59,6 +59,15 @@ public enum MatchingAlgorithm: Sendable, Equatable, Codable {
         case type, config
     }
 
+    /// Decodes a matching algorithm from a keyed container with `type` and `config` fields.
+    ///
+    /// Expected JSON format:
+    /// ```json
+    /// { "type": "editDistance", "config": { ... } }
+    /// { "type": "smithWaterman", "config": { ... } }
+    /// ```
+    ///
+    /// - Throws: `DecodingError.dataCorruptedError` if the `type` value is not recognized.
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let type = try container.decode(String.self, forKey: .type)
@@ -77,6 +86,7 @@ public enum MatchingAlgorithm: Sendable, Equatable, Codable {
         }
     }
 
+    /// Encodes the matching algorithm into a keyed container with `type` and `config` fields.
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         switch self {
@@ -156,6 +166,16 @@ public enum GapPenalty: Sendable, Equatable, Codable {
         case type, perCharacter, open, extend
     }
 
+    /// Decodes a gap penalty from a keyed container with a `type` discriminator.
+    ///
+    /// Expected JSON format:
+    /// ```json
+    /// { "type": "none" }
+    /// { "type": "linear", "perCharacter": 0.01 }
+    /// { "type": "affine", "open": 0.03, "extend": 0.005 }
+    /// ```
+    ///
+    /// - Throws: `DecodingError.dataCorruptedError` if the `type` value is not recognized.
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let type = try container.decode(String.self, forKey: .type)
@@ -177,6 +197,7 @@ public enum GapPenalty: Sendable, Equatable, Codable {
         }
     }
 
+    /// Encodes the gap penalty into a keyed container with a `type` discriminator.
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         switch self {

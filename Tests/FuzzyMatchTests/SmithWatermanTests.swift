@@ -682,9 +682,9 @@ import Testing
     var state = SmithWatermanState(maxQueryLength: 1)
 
     let result = smithWatermanScore(
-        query: queryBytes.span,
-        candidate: candidateBytes.span,
-        bonus: bonusValues.span,
+        query: queryBytes,
+        candidate: candidateBytes,
+        bonus: bonusValues,
         state: &state,
         config: .default
     )
@@ -703,9 +703,9 @@ import Testing
     var state = SmithWatermanState(maxQueryLength: 2)
 
     let result = smithWatermanScore(
-        query: queryBytes.span,
-        candidate: candidateBytes.span,
-        bonus: bonusValues.span,
+        query: queryBytes,
+        candidate: candidateBytes,
+        bonus: bonusValues,
         state: &state,
         config: .default
     )
@@ -724,9 +724,9 @@ import Testing
     var state = SmithWatermanState(maxQueryLength: 2)
 
     let result = smithWatermanScore(
-        query: queryBytes.span,
-        candidate: candidateBytes.span,
-        bonus: bonusValues.span,
+        query: queryBytes,
+        candidate: candidateBytes,
+        bonus: bonusValues,
         state: &state,
         config: .default
     )
@@ -742,9 +742,9 @@ import Testing
     var state = SmithWatermanState(maxQueryLength: 1)
 
     let result = smithWatermanScore(
-        query: queryBytes.span,
-        candidate: candidateBytes.span,
-        bonus: bonusValues.span,
+        query: queryBytes,
+        candidate: candidateBytes,
+        bonus: bonusValues,
         state: &state,
         config: .default
     )
@@ -762,9 +762,9 @@ import Testing
     var state = SmithWatermanState(maxQueryLength: 2)
 
     let result = smithWatermanScore(
-        query: queryBytes.span,
-        candidate: candidateBytes.span,
-        bonus: bonusValues.span,
+        query: queryBytes,
+        candidate: candidateBytes,
+        bonus: bonusValues,
         state: &state,
         config: .default
     )

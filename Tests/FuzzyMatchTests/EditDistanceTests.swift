@@ -22,8 +22,8 @@ import Testing
     var state = EditDistanceState(maxQueryLength: query.count)
 
     let distance = prefixEditDistance(
-        query: query.span,
-        candidate: candidate.span,
+        query: query,
+        candidate: candidate,
         state: &state,
         maxEditDistance: 3
     )
@@ -37,8 +37,8 @@ import Testing
     var state = EditDistanceState(maxQueryLength: query.count)
 
     let distance = prefixEditDistance(
-        query: query.span,
-        candidate: candidate.span,
+        query: query,
+        candidate: candidate,
         state: &state,
         maxEditDistance: 3
     )
@@ -52,8 +52,8 @@ import Testing
     var state = EditDistanceState(maxQueryLength: query.count)
 
     let distance = prefixEditDistance(
-        query: query.span,
-        candidate: candidate.span,
+        query: query,
+        candidate: candidate,
         state: &state,
         maxEditDistance: 3
     )
@@ -67,8 +67,8 @@ import Testing
     var state = EditDistanceState(maxQueryLength: query.count)
 
     let distance = prefixEditDistance(
-        query: query.span,
-        candidate: candidate.span,
+        query: query,
+        candidate: candidate,
         state: &state,
         maxEditDistance: 3
     )
@@ -85,8 +85,8 @@ import Testing
     var state = EditDistanceState(maxQueryLength: query.count)
 
     let distance = prefixEditDistance(
-        query: query.span,
-        candidate: candidate.span,
+        query: query,
+        candidate: candidate,
         state: &state,
         maxEditDistance: 3
     )
@@ -101,8 +101,8 @@ import Testing
     var state = EditDistanceState(maxQueryLength: query.count)
 
     let distance = prefixEditDistance(
-        query: query.span,
-        candidate: candidate.span,
+        query: query,
+        candidate: candidate,
         state: &state,
         maxEditDistance: 3
     )
@@ -117,8 +117,8 @@ import Testing
     var state = EditDistanceState(maxQueryLength: query.count)
 
     let distance = prefixEditDistance(
-        query: query.span,
-        candidate: candidate.span,
+        query: query,
+        candidate: candidate,
         state: &state,
         maxEditDistance: 3
     )
@@ -135,8 +135,8 @@ import Testing
     var state = EditDistanceState(maxQueryLength: query.count)
 
     let distance = prefixEditDistance(
-        query: query.span,
-        candidate: candidate.span,
+        query: query,
+        candidate: candidate,
         state: &state,
         maxEditDistance: 3
     )
@@ -151,8 +151,8 @@ import Testing
     var state = EditDistanceState(maxQueryLength: query.count)
 
     let distance = prefixEditDistance(
-        query: query.span,
-        candidate: candidate.span,
+        query: query,
+        candidate: candidate,
         state: &state,
         maxEditDistance: 3
     )
@@ -166,8 +166,8 @@ import Testing
     var state = EditDistanceState(maxQueryLength: query.count)
 
     let distance = prefixEditDistance(
-        query: query.span,
-        candidate: candidate.span,
+        query: query,
+        candidate: candidate,
         state: &state,
         maxEditDistance: 3
     )
@@ -183,8 +183,8 @@ import Testing
     var state = EditDistanceState(maxQueryLength: query.count)
 
     let distance = substringEditDistance(
-        query: query.span,
-        candidate: candidate.span,
+        query: query,
+        candidate: candidate,
         state: &state,
         maxEditDistance: 3
     )
@@ -199,8 +199,8 @@ import Testing
     var state = EditDistanceState(maxQueryLength: query.count)
 
     let distance = substringEditDistance(
-        query: query.span,
-        candidate: candidate.span,
+        query: query,
+        candidate: candidate,
         state: &state,
         maxEditDistance: 3
     )
@@ -214,8 +214,8 @@ import Testing
     var state = EditDistanceState(maxQueryLength: query.count)
 
     let distance = substringEditDistance(
-        query: query.span,
-        candidate: candidate.span,
+        query: query,
+        candidate: candidate,
         state: &state,
         maxEditDistance: 3
     )
@@ -231,8 +231,8 @@ import Testing
     var state = EditDistanceState(maxQueryLength: query.count)
 
     let distance = prefixEditDistance(
-        query: query.span,
-        candidate: candidate.span,
+        query: query,
+        candidate: candidate,
         state: &state,
         maxEditDistance: 2
     )
@@ -247,8 +247,8 @@ import Testing
     var state = EditDistanceState(maxQueryLength: query.count)
 
     let distance = prefixEditDistance(
-        query: query.span,
-        candidate: candidate.span,
+        query: query,
+        candidate: candidate,
         state: &state,
         maxEditDistance: 2
     )
@@ -263,8 +263,8 @@ import Testing
     var state = EditDistanceState(maxQueryLength: query.count)
 
     let distance = prefixEditDistance(
-        query: query.span,
-        candidate: candidate.span,
+        query: query,
+        candidate: candidate,
         state: &state,
         maxEditDistance: 2
     )
@@ -331,8 +331,8 @@ import Testing
     var state = EditDistanceState(maxQueryLength: query.count)
 
     let distance = prefixEditDistance(
-        query: query.span,
-        candidate: candidate.span,
+        query: query,
+        candidate: candidate,
         state: &state,
         maxEditDistance: 3
     )
@@ -347,8 +347,8 @@ import Testing
     var state = EditDistanceState(maxQueryLength: query.count)
 
     let distance = prefixEditDistance(
-        query: query.span,
-        candidate: candidate.span,
+        query: query,
+        candidate: candidate,
         state: &state,
         maxEditDistance: 3
     )
@@ -367,8 +367,8 @@ import Testing
     var state = EditDistanceState(maxQueryLength: query.count)
 
     let distance = prefixEditDistance(
-        query: query.span,
-        candidate: candidate.span,
+        query: query,
+        candidate: candidate,
         state: &state,
         maxEditDistance: 5
     )
@@ -389,8 +389,8 @@ import Testing
     var stateA = EditDistanceState(maxQueryLength: a.count)
     var stateB = EditDistanceState(maxQueryLength: b.count)
 
-    let dAB = prefixEditDistance(query: a.span, candidate: b.span, state: &stateA, maxEditDistance: 5)
-    let dBA = prefixEditDistance(query: b.span, candidate: a.span, state: &stateB, maxEditDistance: 5)
+    let dAB = prefixEditDistance(query: a, candidate: b, state: &stateA, maxEditDistance: 5)
+    let dBA = prefixEditDistance(query: b, candidate: a, state: &stateB, maxEditDistance: 5)
 
     #expect(dAB == 0)
     #expect(dBA == 0)
@@ -402,8 +402,8 @@ import Testing
     var stateA = EditDistanceState(maxQueryLength: a.count)
     var stateB = EditDistanceState(maxQueryLength: b.count)
 
-    let dAB = prefixEditDistance(query: a.span, candidate: b.span, state: &stateA, maxEditDistance: 5)
-    let dBA = prefixEditDistance(query: b.span, candidate: a.span, state: &stateB, maxEditDistance: 5)
+    let dAB = prefixEditDistance(query: a, candidate: b, state: &stateA, maxEditDistance: 5)
+    let dBA = prefixEditDistance(query: b, candidate: a, state: &stateB, maxEditDistance: 5)
 
     #expect(dAB == dBA)
     #expect(dAB == 1)
@@ -415,8 +415,8 @@ import Testing
     var stateA = EditDistanceState(maxQueryLength: a.count)
     var stateB = EditDistanceState(maxQueryLength: b.count)
 
-    let dAB = prefixEditDistance(query: a.span, candidate: b.span, state: &stateA, maxEditDistance: 5)
-    let dBA = prefixEditDistance(query: b.span, candidate: a.span, state: &stateB, maxEditDistance: 5)
+    let dAB = prefixEditDistance(query: a, candidate: b, state: &stateA, maxEditDistance: 5)
+    let dBA = prefixEditDistance(query: b, candidate: a, state: &stateB, maxEditDistance: 5)
 
     #expect(dAB == dBA)
     #expect(dAB == 1)
@@ -431,8 +431,8 @@ import Testing
     var stateA = EditDistanceState(maxQueryLength: a.count)
     var stateB = EditDistanceState(maxQueryLength: b.count)
 
-    let dAB = prefixEditDistance(query: a.span, candidate: b.span, state: &stateA, maxEditDistance: 5)
-    let dBA = prefixEditDistance(query: b.span, candidate: a.span, state: &stateB, maxEditDistance: 5)
+    let dAB = prefixEditDistance(query: a, candidate: b, state: &stateA, maxEditDistance: 5)
+    let dBA = prefixEditDistance(query: b, candidate: a, state: &stateB, maxEditDistance: 5)
 
     #expect(dAB == dBA)
     #expect(dAB == 1)
@@ -444,8 +444,8 @@ import Testing
     var stateA = EditDistanceState(maxQueryLength: a.count)
     var stateB = EditDistanceState(maxQueryLength: b.count)
 
-    let dAB = prefixEditDistance(query: a.span, candidate: b.span, state: &stateA, maxEditDistance: 5)
-    let dBA = prefixEditDistance(query: b.span, candidate: a.span, state: &stateB, maxEditDistance: 5)
+    let dAB = prefixEditDistance(query: a, candidate: b, state: &stateA, maxEditDistance: 5)
+    let dBA = prefixEditDistance(query: b, candidate: a, state: &stateB, maxEditDistance: 5)
 
     // Same-length strings: prefix edit distance is the full Damerau-Levenshtein distance
     #expect(dAB == dBA)
@@ -457,8 +457,8 @@ import Testing
     var stateA = EditDistanceState(maxQueryLength: a.count)
     var stateB = EditDistanceState(maxQueryLength: b.count)
 
-    let dAB = prefixEditDistance(query: a.span, candidate: b.span, state: &stateA, maxEditDistance: 5)
-    let dBA = prefixEditDistance(query: b.span, candidate: a.span, state: &stateB, maxEditDistance: 5)
+    let dAB = prefixEditDistance(query: a, candidate: b, state: &stateA, maxEditDistance: 5)
+    let dBA = prefixEditDistance(query: b, candidate: a, state: &stateB, maxEditDistance: 5)
 
     #expect(dAB == dBA)
     #expect(dAB == 3)
@@ -470,9 +470,9 @@ import Testing
     var stateA = EditDistanceState(maxQueryLength: empty.count)
     var stateB = EditDistanceState(maxQueryLength: nonempty.count)
 
-    let dAB = prefixEditDistance(query: empty.span, candidate: nonempty.span, state: &stateA, maxEditDistance: 5)
+    let dAB = prefixEditDistance(query: empty, candidate: nonempty, state: &stateA, maxEditDistance: 5)
     // Reverse: "abc" against "" — prefix distance is 3 (delete all)
-    let dBA = prefixEditDistance(query: nonempty.span, candidate: empty.span, state: &stateB, maxEditDistance: 5)
+    let dBA = prefixEditDistance(query: nonempty, candidate: empty, state: &stateB, maxEditDistance: 5)
 
     // Empty query matches any prefix with 0 edits; nonempty query against empty candidate = queryLength
     #expect(dAB == 0)
@@ -488,8 +488,8 @@ import Testing
     var stateA = EditDistanceState(maxQueryLength: a.count)
     var stateB = EditDistanceState(maxQueryLength: b.count)
 
-    let dAB = prefixEditDistance(query: a.span, candidate: b.span, state: &stateA, maxEditDistance: 5)
-    let dBA = prefixEditDistance(query: b.span, candidate: a.span, state: &stateB, maxEditDistance: 5)
+    let dAB = prefixEditDistance(query: a, candidate: b, state: &stateA, maxEditDistance: 5)
+    let dBA = prefixEditDistance(query: b, candidate: a, state: &stateB, maxEditDistance: 5)
 
     #expect(dAB == dBA)
     #expect(dAB == 1)
@@ -506,7 +506,7 @@ import Testing
     let b: [UInt8] = Array("abcdxy".utf8)
     var state = EditDistanceState(maxQueryLength: a.count)
 
-    let distance = prefixEditDistance(query: a.span, candidate: b.span, state: &state, maxEditDistance: 5)
+    let distance = prefixEditDistance(query: a, candidate: b, state: &state, maxEditDistance: 5)
 
     #expect(distance == 2) // 2 substitutions: e→x, f→y
 }
@@ -517,7 +517,7 @@ import Testing
     let b: [UInt8] = Array("abdefg".utf8)
     var state = EditDistanceState(maxQueryLength: a.count)
 
-    let distance = prefixEditDistance(query: a.span, candidate: b.span, state: &state, maxEditDistance: 5)
+    let distance = prefixEditDistance(query: a, candidate: b, state: &state, maxEditDistance: 5)
 
     #expect(distance == 2) // 2 substitutions: x→a, y→b
 }
@@ -528,7 +528,7 @@ import Testing
     let b: [UInt8] = Array("abcydef".utf8)
     var state = EditDistanceState(maxQueryLength: a.count)
 
-    let distance = prefixEditDistance(query: a.span, candidate: b.span, state: &state, maxEditDistance: 5)
+    let distance = prefixEditDistance(query: a, candidate: b, state: &state, maxEditDistance: 5)
 
     #expect(distance == 1) // 1 substitution in the middle
 }
@@ -539,7 +539,7 @@ import Testing
     let candidate: [UInt8] = Array("abcdef".utf8)
     var state = EditDistanceState(maxQueryLength: query.count)
 
-    let distance = prefixEditDistance(query: query.span, candidate: candidate.span, state: &state, maxEditDistance: 5)
+    let distance = prefixEditDistance(query: query, candidate: candidate, state: &state, maxEditDistance: 5)
 
     #expect(distance == 0) // exact prefix match
 }
@@ -550,7 +550,7 @@ import Testing
     let b: [UInt8] = Array("abcstdef".utf8)
     var state = EditDistanceState(maxQueryLength: a.count)
 
-    let distance = prefixEditDistance(query: a.span, candidate: b.span, state: &state, maxEditDistance: 5)
+    let distance = prefixEditDistance(query: a, candidate: b, state: &state, maxEditDistance: 5)
 
     #expect(distance == 1) // transposition of "ts" → "st"
 }
@@ -562,7 +562,7 @@ import Testing
     let b: [UInt8] = Array((prefix + "y").utf8)
     var state = EditDistanceState(maxQueryLength: a.count)
 
-    let distance = prefixEditDistance(query: a.span, candidate: b.span, state: &state, maxEditDistance: 5)
+    let distance = prefixEditDistance(query: a, candidate: b, state: &state, maxEditDistance: 5)
 
     #expect(distance == 1)
 }
@@ -577,8 +577,8 @@ import Testing
     var state = EditDistanceState(maxQueryLength: query.count)
 
     let distance = prefixEditDistance(
-        query: query.span,
-        candidate: candidate.span,
+        query: query,
+        candidate: candidate,
         state: &state,
         maxEditDistance: 1
     )
@@ -592,8 +592,8 @@ import Testing
     var state = EditDistanceState(maxQueryLength: query.count)
 
     let distance = prefixEditDistance(
-        query: query.span,
-        candidate: candidate.span,
+        query: query,
+        candidate: candidate,
         state: &state,
         maxEditDistance: 1
     )

@@ -121,7 +121,7 @@ import Testing
 
     let candidateBytes: [UInt8] = Array("hello".utf8)
     let count = countSharedTrigrams(
-        candidateBytes: candidateBytes.span,
+        candidateBytes: candidateBytes,
         queryTrigrams: queryTrigrams
     )
 
@@ -134,7 +134,7 @@ import Testing
 
     let candidateBytes: [UInt8] = Array("help".utf8)
     let count = countSharedTrigrams(
-        candidateBytes: candidateBytes.span,
+        candidateBytes: candidateBytes,
         queryTrigrams: queryTrigrams
     )
 
@@ -148,7 +148,7 @@ import Testing
 
     let candidateBytes: [UInt8] = Array("xyz".utf8)
     let count = countSharedTrigrams(
-        candidateBytes: candidateBytes.span,
+        candidateBytes: candidateBytes,
         queryTrigrams: queryTrigrams
     )
 
@@ -161,7 +161,7 @@ import Testing
 
     let candidateBytes: [UInt8] = Array("he".utf8)
     let count = countSharedTrigrams(
-        candidateBytes: candidateBytes.span,
+        candidateBytes: candidateBytes,
         queryTrigrams: queryTrigrams
     )
 
@@ -173,7 +173,7 @@ import Testing
 
     let candidateBytes: [UInt8] = Array("hello".utf8)
     let count = countSharedTrigrams(
-        candidateBytes: candidateBytes.span,
+        candidateBytes: candidateBytes,
         queryTrigrams: queryTrigrams
     )
 
@@ -186,7 +186,7 @@ import Testing
 
     let candidateBytes: [UInt8] = Array("unittest".utf8)
     let count = countSharedTrigrams(
-        candidateBytes: candidateBytes.span,
+        candidateBytes: candidateBytes,
         queryTrigrams: queryTrigrams
     )
 
@@ -202,7 +202,7 @@ import Testing
 
     let candidateBytes: [UInt8] = Array("hello".utf8)
     let passes = passesTrigramFilter(
-        candidateBytes: candidateBytes.span,
+        candidateBytes: candidateBytes,
         queryTrigrams: queryTrigrams,
         maxEditDistance: 2
     )
@@ -216,7 +216,7 @@ import Testing
 
     let candidateBytes: [UInt8] = Array("hallo".utf8)
     let passes = passesTrigramFilter(
-        candidateBytes: candidateBytes.span,
+        candidateBytes: candidateBytes,
         queryTrigrams: queryTrigrams,
         maxEditDistance: 2
     )
@@ -235,7 +235,7 @@ import Testing
 
     let candidateBytes: [UInt8] = Array("xyz".utf8)
     let passes = passesTrigramFilter(
-        candidateBytes: candidateBytes.span,
+        candidateBytes: candidateBytes,
         queryTrigrams: queryTrigrams,
         maxEditDistance: 2
     )
@@ -270,7 +270,7 @@ import Testing
 
     let candidateBytes: [UInt8] = Array("anything".utf8)
     let passes = passesTrigramFilter(
-        candidateBytes: candidateBytes.span,
+        candidateBytes: candidateBytes,
         queryTrigrams: queryTrigrams,
         maxEditDistance: 2
     )
@@ -285,7 +285,7 @@ import Testing
 
     let candidateBytes: [UInt8] = Array("world".utf8)
     let passes = passesTrigramFilter(
-        candidateBytes: candidateBytes.span,
+        candidateBytes: candidateBytes,
         queryTrigrams: queryTrigrams,
         maxEditDistance: 5
     )
@@ -303,7 +303,7 @@ import Testing
     // Candidate that shares exactly 1 trigram
     let candidateBytes: [UInt8] = Array("llox".utf8) // "llo" is shared
     let passes = passesTrigramFilter(
-        candidateBytes: candidateBytes.span,
+        candidateBytes: candidateBytes,
         queryTrigrams: queryTrigrams,
         maxEditDistance: 2
     )

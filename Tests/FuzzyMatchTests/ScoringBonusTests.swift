@@ -22,8 +22,8 @@ import Testing
     var positions = [Int](repeating: 0, count: query.count)
 
     let count = findMatchPositions(
-        query: query.span,
-        candidate: candidate.span,
+        query: query,
+        candidate: candidate,
         boundaryMask: 0b1,  // Only position 0 is boundary
         positions: &positions
     )
@@ -41,11 +41,11 @@ import Testing
     var positions = [Int](repeating: 0, count: query.count)
 
     // Compute boundary mask for candidate
-    let boundaryMask = computeBoundaryMask(bytes: candidate.span)
+    let boundaryMask = computeBoundaryMask(bytes: candidate)
 
     let count = findMatchPositions(
-        query: query.span,
-        candidate: candidate.span,
+        query: query,
+        candidate: candidate,
         boundaryMask: boundaryMask,
         positions: &positions
     )
@@ -67,8 +67,8 @@ import Testing
     var positions = [Int](repeating: 0, count: query.count)
 
     let count = findMatchPositions(
-        query: query.span,
-        candidate: candidate.span,
+        query: query,
+        candidate: candidate,
         boundaryMask: 0b1,  // Only position 0
         positions: &positions
     )
@@ -85,8 +85,8 @@ import Testing
     var positions = [Int](repeating: 0, count: query.count)
 
     let count = findMatchPositions(
-        query: query.span,
-        candidate: candidate.span,
+        query: query,
+        candidate: candidate,
         boundaryMask: 0b1,
         positions: &positions
     )
@@ -100,8 +100,8 @@ import Testing
     var positions = [Int](repeating: 0, count: 1)
 
     let count = findMatchPositions(
-        query: query.span,
-        candidate: candidate.span,
+        query: query,
+        candidate: candidate,
         boundaryMask: 0b1,
         positions: &positions
     )
@@ -116,7 +116,7 @@ import Testing
     let positions = [0, 3, 7, 9]  // All boundary positions
     let candidate = Array("getUserById".utf8)
 
-    let boundaryMask = computeBoundaryMask(bytes: candidate.span)
+    let boundaryMask = computeBoundaryMask(bytes: candidate)
 
     // Use linear gap model without position bonus
     let config = EditDistanceConfig(
@@ -129,7 +129,7 @@ import Testing
     let bonus = calculateBonuses(
         matchPositions: positions,
         positionCount: positions.count,
-        candidateBytes: candidate.span,
+        candidateBytes: candidate,
         boundaryMask: boundaryMask,
         config: config
     )
@@ -145,7 +145,7 @@ import Testing
     let positions = [0, 1, 2]
     let candidate = Array("abc".utf8)
 
-    let boundaryMask = computeBoundaryMask(bytes: candidate.span)
+    let boundaryMask = computeBoundaryMask(bytes: candidate)
 
     // Use linear gap model without position bonus
     let config = EditDistanceConfig(
@@ -158,7 +158,7 @@ import Testing
     let bonus = calculateBonuses(
         matchPositions: positions,
         positionCount: positions.count,
-        candidateBytes: candidate.span,
+        candidateBytes: candidate,
         boundaryMask: boundaryMask,
         config: config
     )
@@ -186,7 +186,7 @@ import Testing
     let bonus = calculateBonuses(
         matchPositions: positions,
         positionCount: positions.count,
-        candidateBytes: candidate.span,
+        candidateBytes: candidate,
         boundaryMask: boundaryMask,
         config: config
     )
@@ -200,7 +200,7 @@ import Testing
     let positions = [0, 3, 7, 9]
     let candidate = Array("getUserById".utf8)
 
-    let boundaryMask = computeBoundaryMask(bytes: candidate.span)
+    let boundaryMask = computeBoundaryMask(bytes: candidate)
 
     // All bonuses disabled
     let config = EditDistanceConfig(
@@ -213,7 +213,7 @@ import Testing
     let bonus = calculateBonuses(
         matchPositions: positions,
         positionCount: positions.count,
-        candidateBytes: candidate.span,
+        candidateBytes: candidate,
         boundaryMask: boundaryMask,
         config: config
     )
@@ -389,7 +389,7 @@ import Testing
     let bonus = calculateBonuses(
         matchPositions: positions,
         positionCount: positions.count,
-        candidateBytes: candidate.span,
+        candidateBytes: candidate,
         boundaryMask: boundaryMask,
         config: config
     )
@@ -415,7 +415,7 @@ import Testing
     let bonus = calculateBonuses(
         matchPositions: positions,
         positionCount: positions.count,
-        candidateBytes: candidate.span,
+        candidateBytes: candidate,
         boundaryMask: boundaryMask,
         config: config
     )
@@ -442,7 +442,7 @@ import Testing
     let bonus = calculateBonuses(
         matchPositions: positions,
         positionCount: positions.count,
-        candidateBytes: candidate.span,
+        candidateBytes: candidate,
         boundaryMask: boundaryMask,
         config: config
     )
@@ -468,7 +468,7 @@ import Testing
     let bonus = calculateBonuses(
         matchPositions: positions,
         positionCount: positions.count,
-        candidateBytes: candidate.span,
+        candidateBytes: candidate,
         boundaryMask: boundaryMask,
         config: config
     )
@@ -494,7 +494,7 @@ import Testing
     let bonus = calculateBonuses(
         matchPositions: positions,
         positionCount: positions.count,
-        candidateBytes: candidate.span,
+        candidateBytes: candidate,
         boundaryMask: boundaryMask,
         config: config
     )
@@ -519,7 +519,7 @@ import Testing
     let bonus = calculateBonuses(
         matchPositions: positions,
         positionCount: positions.count,
-        candidateBytes: candidate.span,
+        candidateBytes: candidate,
         boundaryMask: boundaryMask,
         config: config
     )
@@ -545,7 +545,7 @@ import Testing
     let linearBonus = calculateBonuses(
         matchPositions: positions,
         positionCount: positions.count,
-        candidateBytes: candidate.span,
+        candidateBytes: candidate,
         boundaryMask: boundaryMask,
         config: linearConfig
     )
@@ -561,7 +561,7 @@ import Testing
     let affineBonus = calculateBonuses(
         matchPositions: positions,
         positionCount: positions.count,
-        candidateBytes: candidate.span,
+        candidateBytes: candidate,
         boundaryMask: boundaryMask,
         config: affineConfig
     )
@@ -591,7 +591,7 @@ import Testing
     let bonus = calculateBonuses(
         matchPositions: positions,
         positionCount: positions.count,
-        candidateBytes: candidate.span,
+        candidateBytes: candidate,
         boundaryMask: boundaryMask,
         config: config
     )

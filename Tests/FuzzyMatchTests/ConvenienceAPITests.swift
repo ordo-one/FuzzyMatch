@@ -404,6 +404,170 @@ import Testing
     }
 }
 
+// MARK: - UTF-8 API Equivalence Tests
+
+@Test func utf8APIEquivalentToStringAPI() {
+    let matcher = FuzzyMatcher()
+
+    // Cover all match kinds: exact, prefix, substring, acronym, nil
+    let cases: [(candidate: String, query: String)] = [
+        ("User", "user"),                                       // exact
+        ("getUserById", "get"),                                 // prefix
+        ("getCurrentUser", "user"),                             // substring
+        ("International Consolidated Airlines Group", "icag"),  // acronym
+        ("abc", "xyz"),                                         // nil
+        ("a", "a"),                                             // exact single char
+        ("apple", "apl"),                                       // prefix with edit
+        ("Bristol-Myers Squibb", "bms")                        // acronym
+    ]
+
+    for (candidate, queryStr) in cases {
+        let query = matcher.prepare(queryStr)
+        var buffer = matcher.makeBuffer()
+        let stringResult = matcher.score(candidate, against: query, buffer: &buffer)
+
+        var c = candidate
+        let utf8Result = c.withUTF8 { utf8 in
+            matcher.score(utf8: utf8, against: query, buffer: &buffer)
+        }
+
+        #expect(stringResult?.score == utf8Result?.score,
+                "Score mismatch for \(candidate)/\(queryStr): string=\(String(describing: stringResult?.score)) utf8=\(String(describing: utf8Result?.score))")
+        #expect(stringResult?.kind == utf8Result?.kind,
+                "Kind mismatch for \(candidate)/\(queryStr): string=\(String(describing: stringResult?.kind)) utf8=\(String(describing: utf8Result?.kind))")
+    }
+}
+
+@Test func utf8APIEquivalentWithTypos() {
+    let matcher = FuzzyMatcher()
+
+    let cases: [(candidate: String, query: String)] = [
+        ("Goldman Sachs", "Goldamn"),
+        ("Boeing", "Voeing"),
+        ("Blackstone Inc", "blakstone"),
+        ("Mastercard", "Mastecard")
+    ]
+
+    for (candidate, queryStr) in cases {
+        let query = matcher.prepare(queryStr)
+        var buffer = matcher.makeBuffer()
+        let stringResult = matcher.score(candidate, against: query, buffer: &buffer)
+
+        var c = candidate
+        let utf8Result = c.withUTF8 { utf8 in
+            matcher.score(utf8: utf8, against: query, buffer: &buffer)
+        }
+
+        #expect(stringResult?.score == utf8Result?.score,
+                "Score mismatch for \(candidate)/\(queryStr)")
+        #expect(stringResult?.kind == utf8Result?.kind,
+                "Kind mismatch for \(candidate)/\(queryStr)")
+    }
+}
+
+@Test func utf8APIEquivalentSmithWaterman() {
+    let matcher = FuzzyMatcher(config: .smithWaterman)
+
+    let cases: [(candidate: String, query: String)] = [
+        ("User", "user"),
+        ("getUserById", "get"),
+        ("getCurrentUser", "user"),
+        ("International Consolidated Airlines Group", "icag"),
+        ("abc", "xyz"),
+        ("Bristol-Myers Squibb", "bms")
+    ]
+
+    for (candidate, queryStr) in cases {
+        let query = matcher.prepare(queryStr)
+        var buffer = matcher.makeBuffer()
+        let stringResult = matcher.score(candidate, against: query, buffer: &buffer)
+
+        var c = candidate
+        let utf8Result = c.withUTF8 { utf8 in
+            matcher.score(utf8: utf8, against: query, buffer: &buffer)
+        }
+
+        #expect(stringResult?.score == utf8Result?.score,
+                "SW score mismatch for \(candidate)/\(queryStr)")
+        #expect(stringResult?.kind == utf8Result?.kind,
+                "SW kind mismatch for \(candidate)/\(queryStr)")
+    }
+}
+
+@Test func utf8APIWithEmptyInput() {
+    let matcher = FuzzyMatcher()
+
+    // Empty query — should match with score 1.0
+    do {
+        let query = matcher.prepare("")
+        var buffer = matcher.makeBuffer()
+        var candidate = "anything"
+        let result = candidate.withUTF8 { utf8 in
+            matcher.score(utf8: utf8, against: query, buffer: &buffer)
+        }
+        #expect(result != nil)
+        #expect(result?.score == 1.0)
+        #expect(result?.kind == .exact)
+    }
+
+    // Empty candidate — should return nil
+    do {
+        let query = matcher.prepare("test")
+        var buffer = matcher.makeBuffer()
+        var candidate = ""
+        let result = candidate.withUTF8 { utf8 in
+            matcher.score(utf8: utf8, against: query, buffer: &buffer)
+        }
+        #expect(result == nil)
+    }
+
+    // Both empty — should match
+    do {
+        let query = matcher.prepare("")
+        var buffer = matcher.makeBuffer()
+        var candidate = ""
+        let result = candidate.withUTF8 { utf8 in
+            matcher.score(utf8: utf8, against: query, buffer: &buffer)
+        }
+        #expect(result != nil)
+        #expect(result?.score == 1.0)
+    }
+}
+
+@Test func utf8APIBufferReuse() {
+    let matcher = FuzzyMatcher()
+    let query = matcher.prepare("user")
+    var buffer = matcher.makeBuffer()
+
+    let candidates = ["getUserById", "setUser", "userService", "fetchData", "currentUser"]
+
+    // Score all candidates twice and verify identical results
+    var firstPass: [ScoredMatch?] = []
+    for candidate in candidates {
+        var c = candidate
+        let result = c.withUTF8 { utf8 in
+            matcher.score(utf8: utf8, against: query, buffer: &buffer)
+        }
+        firstPass.append(result)
+    }
+
+    var secondPass: [ScoredMatch?] = []
+    for candidate in candidates {
+        var c = candidate
+        let result = c.withUTF8 { utf8 in
+            matcher.score(utf8: utf8, against: query, buffer: &buffer)
+        }
+        secondPass.append(result)
+    }
+
+    for i in 0..<candidates.count {
+        #expect(firstPass[i]?.score == secondPass[i]?.score,
+                "Buffer reuse score mismatch for \(candidates[i])")
+        #expect(firstPass[i]?.kind == secondPass[i]?.kind,
+                "Buffer reuse kind mismatch for \(candidates[i])")
+    }
+}
+
 // MARK: - Cross-method consistency
 
 @Test func topMatchesSubsetOfMatches() {

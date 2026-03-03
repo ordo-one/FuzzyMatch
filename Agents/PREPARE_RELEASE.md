@@ -1,6 +1,6 @@
 # Prepare Release
 
-When asked to "prepare release", execute the following steps. **Maximize parallelism** — benchmarks and quality runs are independent of each other and of the documentation review tasks, so launch them concurrently.
+When asked to "prepare release", execute the following steps. **All benchmarks and quality runs must be executed sequentially** — never run them concurrently, as parallel execution causes resource contention and unstable results. Documentation review tasks (steps 7-9) may be done in parallel with each other but NOT in parallel with any benchmark or quality run.
 
 1. **Clean stale results**: Remove old benchmark and quality output files from `/tmp/` to ensure fresh data. **Ask the user for confirmation before deleting.**
    ```bash
@@ -16,18 +16,22 @@ When asked to "prepare release", execute the following steps. **Maximize paralle
    (cd Comparison/quality-nucleo && cargo build --release)
    make -C Comparison/quality-rapidfuzz
    ```
-4. **Run benchmarks and quality in parallel with `--skip-build`**: Launch each matcher/mode as a separate background process to utilize all cores. Both scripts support per-matcher flags (`--fm-ed`, `--fm-sw`, `--nucleo`, `--rf-wratio`, `--rf-partial`, `--fzf`) and `--skip-build` to skip the build step (already done in step 3). Use `--fm` or `--rf` as shorthand to run both modes of a matcher:
+4. **Run benchmarks and quality sequentially with `--skip-build`**: Run each matcher/mode one at a time to ensure stable, reproducible results — **never run benchmarks or quality processes concurrently**. Both scripts support per-matcher flags (`--fm-ed`, `--fm-sw`, `--nucleo`, `--rf-wratio`, `--rf-partial`, `--fzf`) and `--skip-build` to skip the build step (already done in step 3). Use `--fm` or `--rf` as shorthand to run both modes of a matcher.
 
-   **Performance benchmarks** (5 parallel processes):
+   **Performance benchmarks** (run in sequence, one at a time):
    ```bash
    bash Comparison/run-benchmarks.sh --fm-ed --skip-build
    bash Comparison/run-benchmarks.sh --fm-sw --skip-build
+   bash Comparison/run-benchmarks.sh --fm-ed-utf8 --skip-build
+   bash Comparison/run-benchmarks.sh --fm-sw-utf8 --skip-build
    bash Comparison/run-benchmarks.sh --nucleo --skip-build
    bash Comparison/run-benchmarks.sh --rf-wratio --skip-build
    bash Comparison/run-benchmarks.sh --rf-partial --skip-build
    ```
 
-   **Quality comparison** (6 parallel processes):
+   The UTF-8 API benchmarks (`--fm-ed-utf8`, `--fm-sw-utf8`) measure the `score(utf8:against:buffer:)` hot path, which is the recommended API for maximum throughput. Use these numbers as the primary FuzzyMatch performance figures in COMPARISON.md and README.md.
+
+   **Quality comparison** (run in sequence, one at a time):
    ```bash
    python3 Comparison/run-quality.py --fm-ed --skip-build
    python3 Comparison/run-quality.py --fm-sw --skip-build
@@ -37,10 +41,12 @@ When asked to "prepare release", execute the following steps. **Maximize paralle
    python3 Comparison/run-quality.py --fzf --skip-build
    ```
 
-   All 11 processes can run concurrently. Use parallel subagents (Task tool with Bash) to launch them simultaneously. While benchmarks run, proceed with documentation review (steps 7-9).
+   Each process must complete before the next one starts. Do NOT use parallel subagents for benchmark or quality runs. Documentation review (steps 7-9) should wait until all benchmarks and quality runs are finished.
 
-   **Output files**: After parallel runs complete, results are available in `/tmp/`:
-   - Performance: `/tmp/bench-fuzzymatch-latest.txt`, `/tmp/bench-fuzzymatch-sw-latest.txt`, `/tmp/bench-nucleo-latest.txt`, `/tmp/bench-rapidfuzz-wratio-latest.txt`, `/tmp/bench-rapidfuzz-partial-latest.txt`
+   **Output files**: After runs complete, results are available in `/tmp/`:
+   - Performance (String API): `/tmp/bench-fuzzymatch-latest.txt`, `/tmp/bench-fuzzymatch-sw-latest.txt`
+   - Performance (UTF-8 API): `/tmp/bench-fuzzymatch-ed-utf8-latest.txt`, `/tmp/bench-fuzzymatch-sw-utf8-latest.txt`
+   - Performance (other): `/tmp/bench-nucleo-latest.txt`, `/tmp/bench-rapidfuzz-wratio-latest.txt`, `/tmp/bench-rapidfuzz-partial-latest.txt`
    - Quality: `/tmp/quality-fuzzymatch-latest.json`, `/tmp/quality-fuzzymatch-sw-latest.json`, `/tmp/quality-nucleo-latest.json`, `/tmp/quality-rapidfuzz-wratio-latest.json`, `/tmp/quality-rapidfuzz-partial-latest.json`, `/tmp/quality-fzf-latest.json`
 
    Read these files to collate results for COMPARISON.md — do not re-run all matchers together just to generate the comparison table.

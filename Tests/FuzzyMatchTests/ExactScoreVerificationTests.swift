@@ -98,7 +98,7 @@ import Testing
     let bonus = calculateBonuses(
         matchPositions: positions,
         positionCount: positions.count,
-        candidateBytes: candidate.span,
+        candidateBytes: candidate,
         boundaryMask: boundaryMask,
         config: config
     )
@@ -129,7 +129,7 @@ import Testing
     let bonus0 = calculateBonuses(
         matchPositions: positions0,
         positionCount: 1,
-        candidateBytes: candidate.span,
+        candidateBytes: candidate,
         boundaryMask: boundaryMask,
         config: config
     )
@@ -142,7 +142,7 @@ import Testing
     let bonus5 = calculateBonuses(
         matchPositions: positions5,
         positionCount: 1,
-        candidateBytes: candidate.span,
+        candidateBytes: candidate,
         boundaryMask: boundaryMask,
         config: config
     )
@@ -390,7 +390,7 @@ import Testing
     let bonus = calculateBonuses(
         matchPositions: positions,
         positionCount: positions.count,
-        candidateBytes: candidate.span,
+        candidateBytes: candidate,
         boundaryMask: boundaryMask,
         config: config
     )
