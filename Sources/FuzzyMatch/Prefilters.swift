@@ -257,73 +257,79 @@ internal func lowercaseUTF8(
     isASCII: Bool
 ) -> Int {
     let count = source.count
-    if isASCII {
-        for i in 0..<count {
-            destination[i] = confusableASCIIToCanonical(lowercaseASCII(source[i]))
-        }
-        return count
-    } else {
-        var i = 0
-        var outIdx = 0
-        while i < count {
-            let byte = source[i]
-            // Skip combining diacritical marks (U+0300–U+036F)
-            if i + 1 < count && isCombiningMark(lead: byte, second: source[i + 1]) {
-                i += 2
-            } else if byte == 0xC3 && i + 1 < count {
-                let lowered = lowercaseLatinExtended(source[i + 1])
-                let ascii = latin1ToASCII(lowered)
-                if ascii != 0 {
-                    destination[outIdx] = ascii
-                    outIdx += 1
-                } else {
-                    destination[outIdx] = byte
-                    destination[outIdx + 1] = lowered
-                    outIdx += 2
-                }
-                i += 2
-            } else if (byte == 0xCE || byte == 0xCF) && i + 1 < count {
-                let (newLead, newSecond) = lowercaseGreek(lead: byte, second: source[i + 1])
-                destination[outIdx] = newLead
-                destination[outIdx + 1] = newSecond
-                outIdx += 2
-                i += 2
-            } else if (byte == 0xD0 || byte == 0xD1) && i + 1 < count {
-                let (newLead, newSecond) = lowercaseCyrillic(lead: byte, second: source[i + 1])
-                destination[outIdx] = newLead
-                destination[outIdx + 1] = newSecond
-                outIdx += 2
-                i += 2
-            } else if (byte == 0xC2 || byte == 0xCA) && i + 1 < count {
-                let ascii = confusable2ByteToASCII(lead: byte, second: source[i + 1])
-                if ascii != 0 {
-                    destination[outIdx] = ascii
-                    outIdx += 1
-                } else {
-                    destination[outIdx] = byte
-                    destination[outIdx + 1] = source[i + 1]
-                    outIdx += 2
-                }
-                i += 2
-            } else if byte == 0xE2 && i + 2 < count {
-                let ascii = confusable3ByteToASCII(second: source[i + 1], third: source[i + 2])
-                if ascii != 0 {
-                    destination[outIdx] = ascii
-                    outIdx += 1
-                } else {
-                    destination[outIdx] = byte
-                    destination[outIdx + 1] = source[i + 1]
-                    destination[outIdx + 2] = source[i + 2]
-                    outIdx += 3
-                }
-                i += 3
-            } else {
-                destination[outIdx] = confusableASCIIToCanonical(lowercaseASCII(byte))
-                outIdx += 1
-                i += 1
+    // Use withUnsafeMutableBufferPointer to bypass Array.subscript.modify coroutine
+    // overhead. Each array subscript write normally goes through a yield-once coroutine
+    // with bounds checking; direct pointer writes eliminate this for the O(n) pass.
+    return destination.withUnsafeMutableBufferPointer { destPtr in
+        let dest = destPtr.baseAddress!
+        if isASCII {
+            for i in 0..<count {
+                dest[i] = confusableASCIIToCanonical(lowercaseASCII(source[i]))
             }
+            return count
+        } else {
+            var i = 0
+            var outIdx = 0
+            while i < count {
+                let byte = source[i]
+                // Skip combining diacritical marks (U+0300–U+036F)
+                if i + 1 < count && isCombiningMark(lead: byte, second: source[i + 1]) {
+                    i += 2
+                } else if byte == 0xC3 && i + 1 < count {
+                    let lowered = lowercaseLatinExtended(source[i + 1])
+                    let ascii = latin1ToASCII(lowered)
+                    if ascii != 0 {
+                        dest[outIdx] = ascii
+                        outIdx += 1
+                    } else {
+                        dest[outIdx] = byte
+                        dest[outIdx + 1] = lowered
+                        outIdx += 2
+                    }
+                    i += 2
+                } else if (byte == 0xCE || byte == 0xCF) && i + 1 < count {
+                    let (newLead, newSecond) = lowercaseGreek(lead: byte, second: source[i + 1])
+                    dest[outIdx] = newLead
+                    dest[outIdx + 1] = newSecond
+                    outIdx += 2
+                    i += 2
+                } else if (byte == 0xD0 || byte == 0xD1) && i + 1 < count {
+                    let (newLead, newSecond) = lowercaseCyrillic(lead: byte, second: source[i + 1])
+                    dest[outIdx] = newLead
+                    dest[outIdx + 1] = newSecond
+                    outIdx += 2
+                    i += 2
+                } else if (byte == 0xC2 || byte == 0xCA) && i + 1 < count {
+                    let ascii = confusable2ByteToASCII(lead: byte, second: source[i + 1])
+                    if ascii != 0 {
+                        dest[outIdx] = ascii
+                        outIdx += 1
+                    } else {
+                        dest[outIdx] = byte
+                        dest[outIdx + 1] = source[i + 1]
+                        outIdx += 2
+                    }
+                    i += 2
+                } else if byte == 0xE2 && i + 2 < count {
+                    let ascii = confusable3ByteToASCII(second: source[i + 1], third: source[i + 2])
+                    if ascii != 0 {
+                        dest[outIdx] = ascii
+                        outIdx += 1
+                    } else {
+                        dest[outIdx] = byte
+                        dest[outIdx + 1] = source[i + 1]
+                        dest[outIdx + 2] = source[i + 2]
+                        outIdx += 3
+                    }
+                    i += 3
+                } else {
+                    dest[outIdx] = confusableASCIIToCanonical(lowercaseASCII(byte))
+                    outIdx += 1
+                    i += 1
+                }
+            }
+            return outIdx
         }
-        return outIdx
     }
 }
 

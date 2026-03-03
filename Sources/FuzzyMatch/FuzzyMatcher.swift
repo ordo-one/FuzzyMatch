@@ -272,6 +272,7 @@ public struct FuzzyMatcher: Sendable {
     /// - Reuse the same buffer across multiple `score` calls for zero allocations
     /// - The buffer automatically expands if needed for longer strings
     /// - For concurrent usage, each thread must have its own buffer
+    @inline(__always)
     public func score(
         _ candidate: String,
         against query: FuzzyQuery,
@@ -282,84 +283,79 @@ public struct FuzzyMatcher: Sendable {
             queryLength: query.lowercased.count,
             candidateLength: candidate.utf8.count
         )
-        // Dispatch based on matching algorithm
-        if let result = candidate.utf8.withContiguousStorageIfAvailable({ candidateUTF8 in
-            switch query.config.algorithm {
-            case .smithWaterman(let swConfig):
-                return scoreSmithWatermanImpl(
-                    candidateUTF8,
-                    against: query,
-                    swConfig: swConfig,
-                    candidateStorage: &buffer.candidateStorage,
-                    smithWatermanState: &buffer.smithWatermanState,
-                    wordInitials: &buffer.wordInitials
-                )
-
-            case .editDistance(let edConfig):
-                // Fast path for 1-character queries: single scan, no buffer needed.
-                // Skip for multi-byte queries (e.g. Latin Extended "à" = 2 UTF-8 bytes).
-                let queryLength = query.lowercased.count
-                if queryLength == 1 {
-                    return scoreTinyQuery1(
-                        candidateUTF8,
-                        candidateLength: candidateUTF8.count,
-                        q0: query.lowercased[0],
-                        edConfig: edConfig,
-                        minScore: query.config.minScore
-                    )
-                }
-
-                // Pass components separately to avoid exclusivity conflicts
-                return scoreImpl(
-                    candidateUTF8,
-                    against: query,
-                    edConfig: edConfig,
-                    candidateStorage: &buffer.candidateStorage,
-                    editDistanceState: &buffer.editDistanceState,
-                    matchPositions: &buffer.matchPositions,
-                    alignmentState: &buffer.alignmentState,
-                    wordInitials: &buffer.wordInitials
-                )
-            }
-        }) {
-            return result
+        // String.withUTF8 borrows contiguous storage for native strings.
+        // For maximum throughput, use score(utf8:against:buffer:) instead.
+        var candidate = candidate
+        return candidate.withUTF8 { candidateUTF8 in
+            self.scoreDispatch(candidateUTF8, against: query, buffer: &buffer)
         }
-        // Fallback for bridged strings without contiguous storage
-        let bytes = Array(candidate.utf8)
-        return bytes.withUnsafeBufferPointer { candidateUTF8 in
-            switch query.config.algorithm {
-            case .smithWaterman(let swConfig):
-                return scoreSmithWatermanImpl(
-                    candidateUTF8,
-                    against: query,
-                    swConfig: swConfig,
-                    candidateStorage: &buffer.candidateStorage,
-                    smithWatermanState: &buffer.smithWatermanState,
-                    wordInitials: &buffer.wordInitials
-                )
+    }
 
-            case .editDistance(let edConfig):
-                let queryLength = query.lowercased.count
-                if queryLength == 1 {
-                    return scoreTinyQuery1(
-                        candidateUTF8,
-                        candidateLength: candidateUTF8.count,
-                        q0: query.lowercased[0],
-                        edConfig: edConfig,
-                        minScore: query.config.minScore
-                    )
-                }
-                return scoreImpl(
+    /// Scores pre-extracted UTF-8 bytes against a prepared query.
+    ///
+    /// This method bypasses the String-to-pointer conversion overhead, making it
+    /// suitable for callers that already have access to the candidate's UTF-8 bytes.
+    ///
+    /// - Parameters:
+    ///   - candidateUTF8: A buffer pointer to the candidate's UTF-8 bytes.
+    ///   - query: A prepared query from ``prepare(_:)``.
+    ///   - buffer: A reusable scoring buffer from ``makeBuffer()``.
+    /// - Returns: A ``ScoredMatch`` if the candidate matches, or `nil`.
+    @inlinable
+    public func score(
+        utf8 candidateUTF8: UnsafeBufferPointer<UInt8>,
+        against query: FuzzyQuery,
+        buffer: inout ScoringBuffer
+    ) -> ScoredMatch? {
+        buffer.recordUsage(
+            queryLength: query.lowercased.count,
+            candidateLength: candidateUTF8.count
+        )
+        return scoreDispatch(candidateUTF8, against: query, buffer: &buffer)
+    }
+
+    /// Dispatches scoring to the appropriate algorithm implementation.
+    @inline(__always)
+    @inlinable
+    internal func scoreDispatch(
+        _ candidateUTF8: UnsafeBufferPointer<UInt8>,
+        against query: FuzzyQuery,
+        buffer: inout ScoringBuffer
+    ) -> ScoredMatch? {
+        switch query.config.algorithm {
+        case .smithWaterman(let swConfig):
+            return scoreSmithWatermanImpl(
+                candidateUTF8,
+                against: query,
+                swConfig: swConfig,
+                candidateStorage: &buffer.candidateStorage,
+                smithWatermanState: &buffer.smithWatermanState,
+                wordInitials: &buffer.wordInitials
+            )
+
+        case .editDistance(let edConfig):
+            // Fast path for 1-character queries: single scan, no buffer needed.
+            // Skip for multi-byte queries (e.g. Latin Extended "à" = 2 UTF-8 bytes).
+            let queryLength = query.lowercased.count
+            if queryLength == 1 {
+                return scoreTinyQuery1(
                     candidateUTF8,
-                    against: query,
+                    candidateLength: candidateUTF8.count,
+                    q0: query.lowercased[0],
                     edConfig: edConfig,
-                    candidateStorage: &buffer.candidateStorage,
-                    editDistanceState: &buffer.editDistanceState,
-                    matchPositions: &buffer.matchPositions,
-                    alignmentState: &buffer.alignmentState,
-                    wordInitials: &buffer.wordInitials
+                    minScore: query.config.minScore
                 )
             }
+            return scoreImpl(
+                candidateUTF8,
+                against: query,
+                edConfig: edConfig,
+                candidateStorage: &buffer.candidateStorage,
+                editDistanceState: &buffer.editDistanceState,
+                matchPositions: &buffer.matchPositions,
+                alignmentState: &buffer.alignmentState,
+                wordInitials: &buffer.wordInitials
+            )
         }
     }
 
@@ -434,10 +430,15 @@ public struct FuzzyMatcher: Sendable {
 
         let actualCandidateLength = lowercaseUTF8(from: candidateUTF8, into: &candidateStorage.bytes, isASCII: candidateIsASCII)
 
-        // Borrow buffers via withUnsafeBufferPointer for the rest of the scoring pipeline
-        return candidateStorage.bytes.withUnsafeBufferPointer { bytesPtr in
-        let candidateSpan = UnsafeBufferPointer(rebasing: bytesPtr[0..<actualCandidateLength])
-        return query.lowercased.withUnsafeBufferPointer { querySpan in
+        // Obtain buffer pointers outside closures so scoring functions are called directly,
+        // enabling cross-function inlining of the phase methods. Safe because:
+        // - query.lowercased is immutable and lives for this call's duration
+        // - candidateStorage bytes were sized by ensureCapacity and won't be resized
+        let candidateSpan = candidateStorage.bytes.withUnsafeBufferPointer {
+            UnsafeBufferPointer(rebasing: $0[0..<actualCandidateLength])
+        }
+        let querySpan = query.lowercased.withUnsafeBufferPointer { $0 }
+
         // Prefilter 3: Trigrams (only if query has enough trigrams to be selective)
         // Skip when threshold (queryTrigrams.count - 3*maxED) is non-positive,
         // since the filter would accept every candidate anyway.
@@ -535,8 +536,6 @@ public struct FuzzyMatcher: Sendable {
         }
 
         return nil
-        } // querySpan
-        } // candidateSpan
     }
 
     // MARK: - Phase Methods

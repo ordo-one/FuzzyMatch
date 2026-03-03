@@ -77,13 +77,16 @@ extension FuzzyMatcher {
         //   Current is whitespace:         bonusBoundaryWhitespace (10)
         //   Current is non-word:           bonusBoundary           (8)
         //   Otherwise:                     0
-        var actualCandidateLength = candidateLength
+        // Use withMutableBuffers to bypass Array.subscript.modify coroutine overhead.
+        // Each array subscript write normally goes through a yield-once coroutine with
+        // bounds checking; UnsafeMutablePointer eliminates this for the O(n) merged pass.
+        let actualCandidateLength = candidateStorage.withMutableBuffers { bytesPtr, bonusPtr in
         if candidateIsASCII {
             // Fast path: ASCII-only
             var prevByte: UInt8 = 0
             for i in 0..<candidateLength {
                 let byte = candidateUTF8[i]
-                candidateStorage.bytes[i] = confusableASCIIToCanonical(lowercaseASCII(byte))
+                bytesPtr[i] = confusableASCIIToCanonical(lowercaseASCII(byte))
 
                 let posBonus: Int32
                 if i == 0 {
@@ -122,9 +125,10 @@ extension FuzzyMatcher {
                         }
                     }
                 }
-                candidateStorage.bonus[i] = posBonus
+                bonusPtr[i] = posBonus
                 prevByte = byte
             }
+            return candidateLength
         } else {
             // Slow path: multi-byte — lowercase + tiered bonus precomputation
             var prevByte: UInt8 = 0
@@ -140,8 +144,8 @@ extension FuzzyMatcher {
                     let ascii = latin1ToASCII(lowered)
                     if ascii != 0 {
                         // Latin-1 diacritic normalizes to ASCII — emit single byte
-                        candidateStorage.bytes[outIdx] = ascii
-                        candidateStorage.bonus[outIdx] = multiBytePositionBonus(
+                        bytesPtr[outIdx] = ascii
+                        bonusPtr[outIdx] = multiBytePositionBonus(
                             outIdx: outIdx, prevByte: prevByte,
                             bonusBoundaryVal: bonusBoundaryVal,
                             bonusBoundaryWhitespaceVal: bonusBoundaryWhitespaceVal,
@@ -150,44 +154,44 @@ extension FuzzyMatcher {
                         prevByte = candidateUTF8[idx + 1]
                         outIdx += 1
                     } else {
-                        candidateStorage.bytes[outIdx] = byte
-                        candidateStorage.bytes[outIdx + 1] = lowered
-                        candidateStorage.bonus[outIdx] = multiBytePositionBonus(
+                        bytesPtr[outIdx] = byte
+                        bytesPtr[outIdx + 1] = lowered
+                        bonusPtr[outIdx] = multiBytePositionBonus(
                             outIdx: outIdx, prevByte: prevByte,
                             bonusBoundaryVal: bonusBoundaryVal,
                             bonusBoundaryWhitespaceVal: bonusBoundaryWhitespaceVal,
                             bonusBoundaryDelimiterVal: bonusBoundaryDelimiterVal
                         )
-                        candidateStorage.bonus[outIdx + 1] = 0
+                        bonusPtr[outIdx + 1] = 0
                         prevByte = candidateUTF8[idx + 1]
                         outIdx += 2
                     }
                     idx += 2
                 } else if (byte == 0xCE || byte == 0xCF) && idx + 1 < candidateLength {
                     let (newLead, newSecond) = lowercaseGreek(lead: byte, second: candidateUTF8[idx + 1])
-                    candidateStorage.bytes[outIdx] = newLead
-                    candidateStorage.bytes[outIdx + 1] = newSecond
-                    candidateStorage.bonus[outIdx] = multiBytePositionBonus(
+                    bytesPtr[outIdx] = newLead
+                    bytesPtr[outIdx + 1] = newSecond
+                    bonusPtr[outIdx] = multiBytePositionBonus(
                         outIdx: outIdx, prevByte: prevByte,
                         bonusBoundaryVal: bonusBoundaryVal,
                         bonusBoundaryWhitespaceVal: bonusBoundaryWhitespaceVal,
                         bonusBoundaryDelimiterVal: bonusBoundaryDelimiterVal
                     )
-                    candidateStorage.bonus[outIdx + 1] = 0
+                    bonusPtr[outIdx + 1] = 0
                     prevByte = candidateUTF8[idx + 1]
                     outIdx += 2
                     idx += 2
                 } else if (byte == 0xD0 || byte == 0xD1) && idx + 1 < candidateLength {
                     let (newLead, newSecond) = lowercaseCyrillic(lead: byte, second: candidateUTF8[idx + 1])
-                    candidateStorage.bytes[outIdx] = newLead
-                    candidateStorage.bytes[outIdx + 1] = newSecond
-                    candidateStorage.bonus[outIdx] = multiBytePositionBonus(
+                    bytesPtr[outIdx] = newLead
+                    bytesPtr[outIdx + 1] = newSecond
+                    bonusPtr[outIdx] = multiBytePositionBonus(
                         outIdx: outIdx, prevByte: prevByte,
                         bonusBoundaryVal: bonusBoundaryVal,
                         bonusBoundaryWhitespaceVal: bonusBoundaryWhitespaceVal,
                         bonusBoundaryDelimiterVal: bonusBoundaryDelimiterVal
                     )
-                    candidateStorage.bonus[outIdx + 1] = 0
+                    bonusPtr[outIdx + 1] = 0
                     prevByte = candidateUTF8[idx + 1]
                     outIdx += 2
                     idx += 2
@@ -195,7 +199,7 @@ extension FuzzyMatcher {
                     let ascii = confusable2ByteToASCII(lead: byte, second: candidateUTF8[idx + 1])
                     if ascii != 0 {
                         // Confusable normalizes to ASCII — emit single byte
-                        candidateStorage.bytes[outIdx] = ascii
+                        bytesPtr[outIdx] = ascii
                         let posBonus: Int32
                         if outIdx == 0 {
                             posBonus = bonusBoundaryWhitespaceVal
@@ -206,19 +210,19 @@ extension FuzzyMatcher {
                             // Apostrophe/quote/dash — non-word punctuation boundary
                             posBonus = bonusBoundaryVal
                         }
-                        candidateStorage.bonus[outIdx] = posBonus
+                        bonusPtr[outIdx] = posBonus
                         prevByte = ascii
                         outIdx += 1
                     } else {
-                        candidateStorage.bytes[outIdx] = byte
-                        candidateStorage.bytes[outIdx + 1] = candidateUTF8[idx + 1]
-                        candidateStorage.bonus[outIdx] = multiBytePositionBonus(
+                        bytesPtr[outIdx] = byte
+                        bytesPtr[outIdx + 1] = candidateUTF8[idx + 1]
+                        bonusPtr[outIdx] = multiBytePositionBonus(
                             outIdx: outIdx, prevByte: prevByte,
                             bonusBoundaryVal: bonusBoundaryVal,
                             bonusBoundaryWhitespaceVal: bonusBoundaryWhitespaceVal,
                             bonusBoundaryDelimiterVal: bonusBoundaryDelimiterVal
                         )
-                        candidateStorage.bonus[outIdx + 1] = 0
+                        bonusPtr[outIdx + 1] = 0
                         prevByte = candidateUTF8[idx + 1]
                         outIdx += 2
                     }
@@ -227,7 +231,7 @@ extension FuzzyMatcher {
                     let ascii = confusable3ByteToASCII(second: candidateUTF8[idx + 1], third: candidateUTF8[idx + 2])
                     if ascii != 0 {
                         // Confusable normalizes to ASCII — emit single byte
-                        candidateStorage.bytes[outIdx] = ascii
+                        bytesPtr[outIdx] = ascii
                         let posBonus: Int32
                         if outIdx == 0 {
                             posBonus = bonusBoundaryWhitespaceVal
@@ -235,27 +239,27 @@ extension FuzzyMatcher {
                             // All 3-byte confusables are punctuation — non-word boundary
                             posBonus = bonusBoundaryVal
                         }
-                        candidateStorage.bonus[outIdx] = posBonus
+                        bonusPtr[outIdx] = posBonus
                         prevByte = ascii
                         outIdx += 1
                     } else {
-                        candidateStorage.bytes[outIdx] = byte
-                        candidateStorage.bytes[outIdx + 1] = candidateUTF8[idx + 1]
-                        candidateStorage.bytes[outIdx + 2] = candidateUTF8[idx + 2]
-                        candidateStorage.bonus[outIdx] = multiBytePositionBonus(
+                        bytesPtr[outIdx] = byte
+                        bytesPtr[outIdx + 1] = candidateUTF8[idx + 1]
+                        bytesPtr[outIdx + 2] = candidateUTF8[idx + 2]
+                        bonusPtr[outIdx] = multiBytePositionBonus(
                             outIdx: outIdx, prevByte: prevByte,
                             bonusBoundaryVal: bonusBoundaryVal,
                             bonusBoundaryWhitespaceVal: bonusBoundaryWhitespaceVal,
                             bonusBoundaryDelimiterVal: bonusBoundaryDelimiterVal
                         )
-                        candidateStorage.bonus[outIdx + 1] = 0
-                        candidateStorage.bonus[outIdx + 2] = 0
+                        bonusPtr[outIdx + 1] = 0
+                        bonusPtr[outIdx + 2] = 0
                         prevByte = candidateUTF8[idx + 2]
                         outIdx += 3
                     }
                     idx += 3
                 } else {
-                    candidateStorage.bytes[outIdx] = confusableASCIIToCanonical(lowercaseASCII(byte))
+                    bytesPtr[outIdx] = confusableASCIIToCanonical(lowercaseASCII(byte))
                     let posBonus: Int32
                     if outIdx == 0 {
                         posBonus = bonusBoundaryWhitespaceVal
@@ -298,13 +302,14 @@ extension FuzzyMatcher {
                             }
                         }
                     }
-                    candidateStorage.bonus[outIdx] = posBonus
+                    bonusPtr[outIdx] = posBonus
                     prevByte = byte
                     outIdx += 1
                     idx += 1
                 }
             }
-            actualCandidateLength = outIdx
+            return outIdx
+        }
         }
 
         // Exact match early exit (before atom split so multi-word self-matches return .exact)
@@ -321,24 +326,32 @@ extension FuzzyMatcher {
             }
         }
 
-        // Borrow both bytes and bonus buffers simultaneously for the DP passes
-        return candidateStorage.withBorrowedBuffers(length: actualCandidateLength) { candidateSpan, bonusSpan in
+        // Obtain buffer pointers outside closures so scoring functions are called directly,
+        // enabling cross-function inlining. Safe because:
+        // - query.lowercased is immutable and lives for this call's duration
+        // - candidateStorage bytes/bonus were sized by ensureCapacity and won't be resized
+        let candidateSpan = candidateStorage.bytes.withUnsafeBufferPointer {
+            UnsafeBufferPointer(rebasing: $0[0..<actualCandidateLength])
+        }
+        let bonusSpan = candidateStorage.bonus.withUnsafeBufferPointer {
+            UnsafeBufferPointer(rebasing: $0[0..<actualCandidateLength])
+        }
+        let querySpan = query.lowercased.withUnsafeBufferPointer { $0 }
+
         if query.atoms.count > 1 {
             // Multi-atom path: score each word independently, AND semantics
             var totalRawScore: Int32 = 0
             for atom in query.atoms {
-                let atomScore = query.lowercased.withUnsafeBufferPointer { lowercasedPtr in
-                    let atomQuery = UnsafeBufferPointer(
-                        rebasing: lowercasedPtr[atom.start..<(atom.start + atom.length)]
-                    )
-                    return smithWatermanScore(
-                        query: atomQuery,
-                        candidate: candidateSpan,
-                        bonus: bonusSpan,
-                        state: &smithWatermanState,
-                        config: sw
-                    )
-                }
+                let atomQuery = UnsafeBufferPointer(
+                    rebasing: querySpan[atom.start..<(atom.start + atom.length)]
+                )
+                let atomScore = smithWatermanScore(
+                    query: atomQuery,
+                    candidate: candidateSpan,
+                    bonus: bonusSpan,
+                    state: &smithWatermanState,
+                    config: sw
+                )
                 if atomScore <= 0 {
                     return nil
                 }
@@ -355,7 +368,6 @@ extension FuzzyMatcher {
         }
 
         // Single-word path
-        return query.lowercased.withUnsafeBufferPointer { querySpan in
         // Run Smith-Waterman DP with precomputed bonus array
         let rawScore = smithWatermanScore(
             query: querySpan,
@@ -418,7 +430,5 @@ extension FuzzyMatcher {
         }
 
         return nil
-        } // querySpan
-        } // candidateSpan, bonusSpan
     }
 }

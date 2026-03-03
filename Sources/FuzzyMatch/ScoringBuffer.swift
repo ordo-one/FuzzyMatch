@@ -39,20 +39,20 @@ internal struct CandidateStorage: Sendable {
         }
     }
 
-    /// Borrows both `bytes` and `bonus` as UnsafeBufferPointers simultaneously.
+    /// Provides mutable raw pointer access to both `bytes` and `bonus` simultaneously.
     ///
-    /// Used by Smith-Waterman scoring which needs concurrent read access to both buffers.
+    /// Eliminates `Array.subscript.modify` coroutine overhead in hot loops where
+    /// bounds checking has already been guaranteed by `ensureCapacity`.
+    /// Must be a method on `self` so Swift sees disjoint access to stored properties
+    /// (calling `bytes.withUnsafeMutableBufferPointer` then `bonus.withUnsafeMutableBufferPointer`
+    /// from outside would trigger an overlapping-access error on the struct).
     @inlinable
-    func withBorrowedBuffers<R>(
-        length: Int,
-        _ body: (UnsafeBufferPointer<UInt8>, UnsafeBufferPointer<Int32>) -> R
+    mutating func withMutableBuffers<R>(
+        _ body: (UnsafeMutablePointer<UInt8>, UnsafeMutablePointer<Int32>) -> R
     ) -> R {
-        bytes.withUnsafeBufferPointer { bytesPtr in
-            bonus.withUnsafeBufferPointer { bonusPtr in
-                body(
-                    UnsafeBufferPointer(rebasing: bytesPtr[0..<length]),
-                    UnsafeBufferPointer(rebasing: bonusPtr[0..<length])
-                )
+        bytes.withUnsafeMutableBufferPointer { bytesPtr in
+            bonus.withUnsafeMutableBufferPointer { bonusPtr in
+                body(bytesPtr.baseAddress!, bonusPtr.baseAddress!)
             }
         }
     }
