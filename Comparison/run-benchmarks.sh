@@ -247,10 +247,10 @@ if $RUN_CONTAINS; then
 fi
 
 # --- Comparison table (only when all are run) ---
-if $RUN_FM_ED && $RUN_NUCLEO && $RUN_RF_WR && $RUN_RF_PR; then
-    # --- Extract metadata from FuzzyMatch output ---
-    NUM_QUERIES=$(echo "$FUZZYMATCH_OUTPUT" | grep "^Running " | sed 's/Running \([0-9]*\) queries/\1/')
-    NUM_ITERATIONS=$(echo "$FUZZYMATCH_OUTPUT" | grep "^Iteration " | tail -1 | sed 's/Iteration \([0-9]*\):.*/\1/')
+if $RUN_FM_ED_UTF8 && $RUN_NUCLEO && $RUN_RF_WR && $RUN_RF_PR; then
+    # --- Extract metadata from FuzzyMatch UTF-8 output ---
+    NUM_QUERIES=$(echo "$FUZZYMATCH_ED_UTF8_OUTPUT" | grep "^Running " | sed 's/Running \([0-9]*\) queries/\1/')
+    NUM_ITERATIONS=$(echo "$FUZZYMATCH_ED_UTF8_OUTPUT" | grep "^Iteration " | tail -1 | sed 's/Iteration \([0-9]*\):.*/\1/')
 
     echo "============================================"
     echo " Comparison Table"
@@ -262,10 +262,10 @@ if $RUN_FM_ED && $RUN_NUCLEO && $RUN_RF_WR && $RUN_RF_PR; then
     echo "  Per iteration: $NUM_QUERIES queries x $CORPUS_SIZE candidates = $(echo "$NUM_QUERIES * $CORPUS_SIZE" | bc) scorings"
     echo ""
 
-    # Build file list for awk — include optional matchers if available
-    AWK_FILES="/tmp/bench-fuzzymatch-latest.txt /tmp/bench-nucleo-latest.txt /tmp/bench-rapidfuzz-wratio-latest.txt /tmp/bench-rapidfuzz-partial-latest.txt"
-    if $RUN_FM_SW; then
-        AWK_FILES="$AWK_FILES /tmp/bench-fuzzymatch-sw-latest.txt"
+    # Build file list for awk — use UTF-8 API outputs (matches COMPARISON.md)
+    AWK_FILES="/tmp/bench-fuzzymatch-ed-utf8-latest.txt /tmp/bench-nucleo-latest.txt /tmp/bench-rapidfuzz-wratio-latest.txt /tmp/bench-rapidfuzz-partial-latest.txt"
+    if $RUN_FM_SW_UTF8; then
+        AWK_FILES="$AWK_FILES /tmp/bench-fuzzymatch-sw-utf8-latest.txt"
     fi
     if $RUN_IFRIT; then
         AWK_FILES="$AWK_FILES /tmp/bench-ifrit-latest.txt"
@@ -274,7 +274,7 @@ if $RUN_FM_ED && $RUN_NUCLEO && $RUN_RF_WR && $RUN_RF_PR; then
         AWK_FILES="$AWK_FILES /tmp/bench-contains-latest.txt"
     fi
 
-    awk -v has_ifrit="$RUN_IFRIT" -v has_sw="$RUN_FM_SW" -v has_contains="$RUN_CONTAINS" '
+    awk -v has_ifrit="$RUN_IFRIT" -v has_sw="$RUN_FM_SW_UTF8" -v has_contains="$RUN_CONTAINS" '
 BEGIN {
     n_cats = split("exact_symbol exact_name exact_isin prefix typo substring multi_word symbol_spaces abbreviation", cats, " ")
 }
@@ -287,11 +287,11 @@ BEGIN {
     if (n >= 2) {
         # parts[2] is like "1725.6ms"
         gsub(/ms.*/, "", parts[2])
-        if (FILENAME == "/tmp/bench-fuzzymatch-latest.txt") fm_total = parts[2] + 0
+        if (FILENAME == "/tmp/bench-fuzzymatch-ed-utf8-latest.txt") fm_total = parts[2] + 0
         else if (FILENAME == "/tmp/bench-nucleo-latest.txt") nuc_total = parts[2] + 0
         else if (FILENAME == "/tmp/bench-rapidfuzz-wratio-latest.txt") rfw_total = parts[2] + 0
         else if (FILENAME == "/tmp/bench-rapidfuzz-partial-latest.txt") rfp_total = parts[2] + 0
-        else if (FILENAME == "/tmp/bench-fuzzymatch-sw-latest.txt") sw_total = parts[2] + 0
+        else if (FILENAME == "/tmp/bench-fuzzymatch-sw-utf8-latest.txt") sw_total = parts[2] + 0
         else if (FILENAME == "/tmp/bench-ifrit-latest.txt") ifrit_total = parts[2] + 0
         else if (FILENAME == "/tmp/bench-contains-latest.txt") cont_total = parts[2] + 0
     }
@@ -301,7 +301,7 @@ BEGIN {
 {
     for (i = 1; i <= n_cats; i++) {
         if ($1 == cats[i] && NF >= 5) {
-            if (FILENAME == "/tmp/bench-fuzzymatch-latest.txt") {
+            if (FILENAME == "/tmp/bench-fuzzymatch-ed-utf8-latest.txt") {
                 fm_med[$1] = $3 + 0
                 fm_matches[$1] = $5
             } else if (FILENAME == "/tmp/bench-nucleo-latest.txt") {
@@ -313,7 +313,7 @@ BEGIN {
             } else if (FILENAME == "/tmp/bench-rapidfuzz-partial-latest.txt") {
                 rfp_med[$1] = $3 + 0
                 rfp_matches[$1] = $5
-            } else if (FILENAME == "/tmp/bench-fuzzymatch-sw-latest.txt") {
+            } else if (FILENAME == "/tmp/bench-fuzzymatch-sw-utf8-latest.txt") {
                 sw_med[$1] = $3 + 0
                 sw_matches[$1] = $5
             } else if (FILENAME == "/tmp/bench-ifrit-latest.txt") {
