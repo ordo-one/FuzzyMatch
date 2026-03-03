@@ -6,7 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 FuzzyMatcher is a high-performance fuzzy string matching library for Swift. It provides two matching modes — **Damerau-Levenshtein edit distance** (default, penalty-driven) and **Smith-Waterman local alignment** (bonus-driven) — both with multi-stage prefiltering and zero-allocation hot paths.
 
-**Requirements:** Swift 6.2+, macOS 26+
+**Requirements:** Swift 6.0+, macOS 14+
+
+> **Note:** When the project moves up to require Swift 6.2, run the `Agents/SPANS_MIGRATION.md` migration guide to restore Span usage for improved memory safety.
 
 ## Build Commands
 

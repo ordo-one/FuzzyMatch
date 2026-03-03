@@ -111,7 +111,7 @@ internal func computeTrigrams(_ bytes: [UInt8]) -> Set<UInt32> {
 /// - Space: O(1) - no allocation for candidate trigrams
 @inlinable
 internal func countSharedTrigrams(
-    candidateBytes: Span<UInt8>,
+    candidateBytes: UnsafeBufferPointer<UInt8>,
     queryTrigrams: Set<UInt32>
 ) -> Int {
     guard candidateBytes.count >= 3 else { return 0 }
@@ -159,7 +159,7 @@ internal func countSharedTrigrams(
 /// O(candidateLength) - linear scan to compute candidate trigrams.
 @inlinable
 internal func passesTrigramFilter(
-    candidateBytes: Span<UInt8>,
+    candidateBytes: UnsafeBufferPointer<UInt8>,
     queryTrigrams: Set<UInt32>,
     maxEditDistance: Int
 ) -> Bool {

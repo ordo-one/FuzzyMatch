@@ -21,12 +21,16 @@ import Testing
     let candidate = Array("abc".utf8)
     var positions = [Int](repeating: 0, count: query.count)
 
-    let count = findMatchPositions(
-        query: query.span,
-        candidate: candidate.span,
-        boundaryMask: 0b1,  // Only position 0 is boundary
-        positions: &positions
-    )
+    let count = query.withUnsafeBufferPointer { qPtr in
+        candidate.withUnsafeBufferPointer { cPtr in
+            findMatchPositions(
+                query: qPtr,
+                candidate: cPtr,
+                boundaryMask: 0b1,  // Only position 0 is boundary
+                positions: &positions
+            )
+        }
+    }
 
     #expect(count == 3)
     #expect(positions[0] == 0)  // a
@@ -41,14 +45,18 @@ import Testing
     var positions = [Int](repeating: 0, count: query.count)
 
     // Compute boundary mask for candidate
-    let boundaryMask = computeBoundaryMask(bytes: candidate.span)
+    let boundaryMask = candidate.withUnsafeBufferPointer { computeBoundaryMask(bytes: $0) }
 
-    let count = findMatchPositions(
-        query: query.span,
-        candidate: candidate.span,
-        boundaryMask: boundaryMask,
-        positions: &positions
-    )
+    let count = query.withUnsafeBufferPointer { qPtr in
+        candidate.withUnsafeBufferPointer { cPtr in
+            findMatchPositions(
+                query: qPtr,
+                candidate: cPtr,
+                boundaryMask: boundaryMask,
+                positions: &positions
+            )
+        }
+    }
 
     #expect(count == 4)
     // g at 0 (boundary), u at 3 (after "get", note: lowercase), b at 7 (boundary), i at 9 (boundary)
@@ -66,12 +74,16 @@ import Testing
     let candidate = Array("fuzzy".utf8)
     var positions = [Int](repeating: 0, count: query.count)
 
-    let count = findMatchPositions(
-        query: query.span,
-        candidate: candidate.span,
-        boundaryMask: 0b1,  // Only position 0
-        positions: &positions
-    )
+    let count = query.withUnsafeBufferPointer { qPtr in
+        candidate.withUnsafeBufferPointer { cPtr in
+            findMatchPositions(
+                query: qPtr,
+                candidate: cPtr,
+                boundaryMask: 0b1,  // Only position 0
+                positions: &positions
+            )
+        }
+    }
 
     #expect(count == 3)
     #expect(positions[0] == 0)  // f
@@ -84,12 +96,16 @@ import Testing
     let candidate = Array("abc".utf8)
     var positions = [Int](repeating: 0, count: query.count)
 
-    let count = findMatchPositions(
-        query: query.span,
-        candidate: candidate.span,
-        boundaryMask: 0b1,
-        positions: &positions
-    )
+    let count = query.withUnsafeBufferPointer { qPtr in
+        candidate.withUnsafeBufferPointer { cPtr in
+            findMatchPositions(
+                query: qPtr,
+                candidate: cPtr,
+                boundaryMask: 0b1,
+                positions: &positions
+            )
+        }
+    }
 
     #expect(count == 0)
 }
@@ -99,12 +115,16 @@ import Testing
     let candidate = Array("abc".utf8)
     var positions = [Int](repeating: 0, count: 1)
 
-    let count = findMatchPositions(
-        query: query.span,
-        candidate: candidate.span,
-        boundaryMask: 0b1,
-        positions: &positions
-    )
+    let count = query.withUnsafeBufferPointer { qPtr in
+        candidate.withUnsafeBufferPointer { cPtr in
+            findMatchPositions(
+                query: qPtr,
+                candidate: cPtr,
+                boundaryMask: 0b1,
+                positions: &positions
+            )
+        }
+    }
 
     #expect(count == 0)
 }
@@ -116,7 +136,7 @@ import Testing
     let positions = [0, 3, 7, 9]  // All boundary positions
     let candidate = Array("getUserById".utf8)
 
-    let boundaryMask = computeBoundaryMask(bytes: candidate.span)
+    let boundaryMask = candidate.withUnsafeBufferPointer { computeBoundaryMask(bytes: $0) }
 
     // Use linear gap model without position bonus
     let config = EditDistanceConfig(
@@ -126,13 +146,15 @@ import Testing
         firstMatchBonus: 0.0
     )
 
-    let bonus = calculateBonuses(
-        matchPositions: positions,
-        positionCount: positions.count,
-        candidateBytes: candidate.span,
-        boundaryMask: boundaryMask,
-        config: config
-    )
+    let bonus = candidate.withUnsafeBufferPointer { cPtr in
+        calculateBonuses(
+            matchPositions: positions,
+            positionCount: positions.count,
+            candidateBytes: cPtr,
+            boundaryMask: boundaryMask,
+            config: config
+        )
+    }
 
     // 4 boundary bonuses (0.4) - gaps: (3-0-1=2)*0.01 + (7-3-1=3)*0.01 + (9-7-1=1)*0.01 = 0.06
     // Total: 0.4 - 0.06 = 0.34
@@ -145,7 +167,7 @@ import Testing
     let positions = [0, 1, 2]
     let candidate = Array("abc".utf8)
 
-    let boundaryMask = computeBoundaryMask(bytes: candidate.span)
+    let boundaryMask = candidate.withUnsafeBufferPointer { computeBoundaryMask(bytes: $0) }
 
     // Use linear gap model without position bonus
     let config = EditDistanceConfig(
@@ -155,13 +177,15 @@ import Testing
         firstMatchBonus: 0.0
     )
 
-    let bonus = calculateBonuses(
-        matchPositions: positions,
-        positionCount: positions.count,
-        candidateBytes: candidate.span,
-        boundaryMask: boundaryMask,
-        config: config
-    )
+    let bonus = candidate.withUnsafeBufferPointer { cPtr in
+        calculateBonuses(
+            matchPositions: positions,
+            positionCount: positions.count,
+            candidateBytes: cPtr,
+            boundaryMask: boundaryMask,
+            config: config
+        )
+    }
 
     // 1 boundary bonus (position 0) + 2 consecutive bonuses
     // = 0.1 + 0.05 + 0.05 = 0.2
@@ -183,13 +207,15 @@ import Testing
         firstMatchBonus: 0.0
     )
 
-    let bonus = calculateBonuses(
-        matchPositions: positions,
-        positionCount: positions.count,
-        candidateBytes: candidate.span,
-        boundaryMask: boundaryMask,
-        config: config
-    )
+    let bonus = candidate.withUnsafeBufferPointer { cPtr in
+        calculateBonuses(
+            matchPositions: positions,
+            positionCount: positions.count,
+            candidateBytes: cPtr,
+            boundaryMask: boundaryMask,
+            config: config
+        )
+    }
 
     // 1 boundary bonus (0.1) - gap penalties: (5-0-1=4)*0.01 + (10-5-1=4)*0.01 = 0.08
     // Total: 0.1 - 0.08 = 0.02
@@ -200,7 +226,7 @@ import Testing
     let positions = [0, 3, 7, 9]
     let candidate = Array("getUserById".utf8)
 
-    let boundaryMask = computeBoundaryMask(bytes: candidate.span)
+    let boundaryMask = candidate.withUnsafeBufferPointer { computeBoundaryMask(bytes: $0) }
 
     // All bonuses disabled
     let config = EditDistanceConfig(
@@ -210,13 +236,15 @@ import Testing
         firstMatchBonus: 0.0
     )
 
-    let bonus = calculateBonuses(
-        matchPositions: positions,
-        positionCount: positions.count,
-        candidateBytes: candidate.span,
-        boundaryMask: boundaryMask,
-        config: config
-    )
+    let bonus = candidate.withUnsafeBufferPointer { cPtr in
+        calculateBonuses(
+            matchPositions: positions,
+            positionCount: positions.count,
+            candidateBytes: cPtr,
+            boundaryMask: boundaryMask,
+            config: config
+        )
+    }
 
     #expect(bonus == 0.0)
 }
@@ -386,13 +414,15 @@ import Testing
         firstMatchBonusRange: 10
     )
 
-    let bonus = calculateBonuses(
-        matchPositions: positions,
-        positionCount: positions.count,
-        candidateBytes: candidate.span,
-        boundaryMask: boundaryMask,
-        config: config
-    )
+    let bonus = candidate.withUnsafeBufferPointer { cPtr in
+        calculateBonuses(
+            matchPositions: positions,
+            positionCount: positions.count,
+            candidateBytes: cPtr,
+            boundaryMask: boundaryMask,
+            config: config
+        )
+    }
 
     // Full first match bonus at position 0
     #expect(abs(bonus - 0.15) < 0.001)
@@ -412,13 +442,15 @@ import Testing
         firstMatchBonusRange: 10
     )
 
-    let bonus = calculateBonuses(
-        matchPositions: positions,
-        positionCount: positions.count,
-        candidateBytes: candidate.span,
-        boundaryMask: boundaryMask,
-        config: config
-    )
+    let bonus = candidate.withUnsafeBufferPointer { cPtr in
+        calculateBonuses(
+            matchPositions: positions,
+            positionCount: positions.count,
+            candidateBytes: cPtr,
+            boundaryMask: boundaryMask,
+            config: config
+        )
+    }
 
     // At position 5 with range 10: decay = 1 - 5/10 = 0.5
     // Bonus = 0.15 * 0.5 = 0.075
@@ -439,13 +471,15 @@ import Testing
         firstMatchBonusRange: 10
     )
 
-    let bonus = calculateBonuses(
-        matchPositions: positions,
-        positionCount: positions.count,
-        candidateBytes: candidate.span,
-        boundaryMask: boundaryMask,
-        config: config
-    )
+    let bonus = candidate.withUnsafeBufferPointer { cPtr in
+        calculateBonuses(
+            matchPositions: positions,
+            positionCount: positions.count,
+            candidateBytes: cPtr,
+            boundaryMask: boundaryMask,
+            config: config
+        )
+    }
 
     // No bonus beyond range
     #expect(bonus == 0.0)
@@ -465,13 +499,15 @@ import Testing
         firstMatchBonusRange: 10
     )
 
-    let bonus = calculateBonuses(
-        matchPositions: positions,
-        positionCount: positions.count,
-        candidateBytes: candidate.span,
-        boundaryMask: boundaryMask,
-        config: config
-    )
+    let bonus = candidate.withUnsafeBufferPointer { cPtr in
+        calculateBonuses(
+            matchPositions: positions,
+            positionCount: positions.count,
+            candidateBytes: cPtr,
+            boundaryMask: boundaryMask,
+            config: config
+        )
+    }
 
     #expect(bonus == 0.0)
 }
@@ -491,13 +527,15 @@ import Testing
         firstMatchBonus: 0.0
     )
 
-    let bonus = calculateBonuses(
-        matchPositions: positions,
-        positionCount: positions.count,
-        candidateBytes: candidate.span,
-        boundaryMask: boundaryMask,
-        config: config
-    )
+    let bonus = candidate.withUnsafeBufferPointer { cPtr in
+        calculateBonuses(
+            matchPositions: positions,
+            positionCount: positions.count,
+            candidateBytes: cPtr,
+            boundaryMask: boundaryMask,
+            config: config
+        )
+    }
 
     // Gap of 1: open + (1-1) * extend = 0.03 + 0 = 0.03
     #expect(abs(bonus - (-0.03)) < 0.001)
@@ -516,13 +554,15 @@ import Testing
         firstMatchBonus: 0.0
     )
 
-    let bonus = calculateBonuses(
-        matchPositions: positions,
-        positionCount: positions.count,
-        candidateBytes: candidate.span,
-        boundaryMask: boundaryMask,
-        config: config
-    )
+    let bonus = candidate.withUnsafeBufferPointer { cPtr in
+        calculateBonuses(
+            matchPositions: positions,
+            positionCount: positions.count,
+            candidateBytes: cPtr,
+            boundaryMask: boundaryMask,
+            config: config
+        )
+    }
 
     // Gap of 3: open + (3-1) * extend = 0.03 + 2 * 0.005 = 0.04
     #expect(abs(bonus - (-0.04)) < 0.001)
@@ -542,13 +582,15 @@ import Testing
         firstMatchBonus: 0.0
     )
 
-    let linearBonus = calculateBonuses(
-        matchPositions: positions,
-        positionCount: positions.count,
-        candidateBytes: candidate.span,
-        boundaryMask: boundaryMask,
-        config: linearConfig
-    )
+    let linearBonus = candidate.withUnsafeBufferPointer { cPtr in
+        calculateBonuses(
+            matchPositions: positions,
+            positionCount: positions.count,
+            candidateBytes: cPtr,
+            boundaryMask: boundaryMask,
+            config: linearConfig
+        )
+    }
 
     // Affine model
     let affineConfig = EditDistanceConfig(
@@ -558,13 +600,15 @@ import Testing
         firstMatchBonus: 0.0
     )
 
-    let affineBonus = calculateBonuses(
-        matchPositions: positions,
-        positionCount: positions.count,
-        candidateBytes: candidate.span,
-        boundaryMask: boundaryMask,
-        config: affineConfig
-    )
+    let affineBonus = candidate.withUnsafeBufferPointer { cPtr in
+        calculateBonuses(
+            matchPositions: positions,
+            positionCount: positions.count,
+            candidateBytes: cPtr,
+            boundaryMask: boundaryMask,
+            config: affineConfig
+        )
+    }
 
     // Linear: 3 * 0.01 = 0.03 penalty
     // Affine: 0.03 + 2 * 0.005 = 0.04 penalty
@@ -588,13 +632,15 @@ import Testing
         firstMatchBonus: 0.0
     )
 
-    let bonus = calculateBonuses(
-        matchPositions: positions,
-        positionCount: positions.count,
-        candidateBytes: candidate.span,
-        boundaryMask: boundaryMask,
-        config: config
-    )
+    let bonus = candidate.withUnsafeBufferPointer { cPtr in
+        calculateBonuses(
+            matchPositions: positions,
+            positionCount: positions.count,
+            candidateBytes: cPtr,
+            boundaryMask: boundaryMask,
+            config: config
+        )
+    }
 
     // Linear gaps: (5-0-1=4)*0.01 + (10-5-1=4)*0.01 = 0.08 penalty
     #expect(abs(bonus - (-0.08)) < 0.001)

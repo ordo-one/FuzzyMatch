@@ -26,7 +26,7 @@ extension FuzzyMatcher {
     /// 7. Apply minScore threshold
     @inlinable
     internal func scoreSmithWatermanImpl(
-        _ candidateUTF8: Span<UInt8>,
+        _ candidateUTF8: UnsafeBufferPointer<UInt8>,
         against query: FuzzyQuery,
         swConfig: SmithWatermanConfig,
         candidateStorage: inout CandidateStorage,
@@ -307,9 +307,6 @@ extension FuzzyMatcher {
             actualCandidateLength = outIdx
         }
 
-        let candidateSpan = candidateStorage.bytes.span.extracting(0..<actualCandidateLength)
-        let bonusSpan = candidateStorage.bonus.span.extracting(0..<actualCandidateLength)
-
         // Exact match early exit (before atom split so multi-word self-matches return .exact)
         if actualCandidateLength == queryLength {
             var isExact = true
@@ -324,20 +321,24 @@ extension FuzzyMatcher {
             }
         }
 
+        // Borrow both bytes and bonus buffers simultaneously for the DP passes
+        return candidateStorage.withBorrowedBuffers(length: actualCandidateLength) { candidateSpan, bonusSpan in
         if query.atoms.count > 1 {
             // Multi-atom path: score each word independently, AND semantics
             var totalRawScore: Int32 = 0
             for atom in query.atoms {
-                let atomQuery = query.lowercased.span.extracting(
-                    atom.start..<(atom.start + atom.length)
-                )
-                let atomScore = smithWatermanScore(
-                    query: atomQuery,
-                    candidate: candidateSpan,
-                    bonus: bonusSpan,
-                    state: &smithWatermanState,
-                    config: sw
-                )
+                let atomScore = query.lowercased.withUnsafeBufferPointer { lowercasedPtr in
+                    let atomQuery = UnsafeBufferPointer(
+                        rebasing: lowercasedPtr[atom.start..<(atom.start + atom.length)]
+                    )
+                    return smithWatermanScore(
+                        query: atomQuery,
+                        candidate: candidateSpan,
+                        bonus: bonusSpan,
+                        state: &smithWatermanState,
+                        config: sw
+                    )
+                }
                 if atomScore <= 0 {
                     return nil
                 }
@@ -354,8 +355,7 @@ extension FuzzyMatcher {
         }
 
         // Single-word path
-        let querySpan = query.lowercased.span
-
+        return query.lowercased.withUnsafeBufferPointer { querySpan in
         // Run Smith-Waterman DP with precomputed bonus array
         let rawScore = smithWatermanScore(
             query: querySpan,
@@ -418,5 +418,7 @@ extension FuzzyMatcher {
         }
 
         return nil
+        } // querySpan
+        } // candidateSpan, bonusSpan
     }
 }

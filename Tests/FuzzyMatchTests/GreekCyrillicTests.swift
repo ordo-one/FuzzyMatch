@@ -155,8 +155,8 @@ import Testing
     // Upper and lowercase Cyrillic should produce matching bitmasks
     let upper = Array("БЕОГРАД".utf8)
     let lower = Array("београд".utf8)
-    let upperMask = computeCharBitmaskCaseInsensitive(upper.span)
-    let lowerMask = computeCharBitmaskCaseInsensitive(lower.span)
+    let upperMask = upper.withUnsafeBufferPointer { computeCharBitmaskCaseInsensitive($0) }
+    let lowerMask = lower.withUnsafeBufferPointer { computeCharBitmaskCaseInsensitive($0) }
     #expect(upperMask == lowerMask)
 }
 
@@ -164,8 +164,8 @@ import Testing
     // Upper and lowercase Greek should produce matching bitmasks
     let upper = Array("ΑΘΗΝΑ".utf8)
     let lower = Array("αθηνα".utf8)
-    let upperMask = computeCharBitmaskCaseInsensitive(upper.span)
-    let lowerMask = computeCharBitmaskCaseInsensitive(lower.span)
+    let upperMask = upper.withUnsafeBufferPointer { computeCharBitmaskCaseInsensitive($0) }
+    let lowerMask = lower.withUnsafeBufferPointer { computeCharBitmaskCaseInsensitive($0) }
     #expect(upperMask == lowerMask)
 }
 
@@ -174,7 +174,7 @@ import Testing
 @Test func cyrillicNoFalseBoundaries() {
     // No false word boundaries inside a Cyrillic word
     let bytes = Array("београд".utf8)
-    let mask = computeBoundaryMask(bytes: bytes.span)
+    let mask = bytes.withUnsafeBufferPointer { computeBoundaryMask(bytes: $0) }
     // Only position 0 should be a boundary
     #expect(mask == 1)
 }
@@ -182,7 +182,7 @@ import Testing
 @Test func greekNoFalseBoundaries() {
     // No false word boundaries inside a Greek word
     let bytes = Array("αθηνα".utf8)
-    let mask = computeBoundaryMask(bytes: bytes.span)
+    let mask = bytes.withUnsafeBufferPointer { computeBoundaryMask(bytes: $0) }
     // Only position 0 should be a boundary
     #expect(mask == 1)
 }
@@ -191,7 +191,7 @@ import Testing
     // Space-separated Cyrillic words should have boundaries at word starts
     let text = "нови сад"
     let bytes = Array(text.utf8)
-    let mask = computeBoundaryMask(bytes: bytes.span)
+    let mask = bytes.withUnsafeBufferPointer { computeBoundaryMask(bytes: $0) }
     // Boundary at position 0 and after the space
     #expect((mask & 1) != 0)  // position 0
     let spacePos = Array("нови ".utf8).count

@@ -365,7 +365,7 @@ FuzzyMatcher includes a [libFuzzer](https://llvm.org/docs/LibFuzzer.html)-based 
 
 > **Linux only** — Swift's `-sanitize=fuzzer` requires the open-source Swift toolchain. It is not available in the Xcode toolchain on macOS.
 
-**Requirements:** Swift 6.2+ open-source toolchain on Linux.
+**Requirements:** Swift 6.0+ open-source toolchain on Linux.
 
 ```bash
 # Build only (release)
@@ -494,12 +494,6 @@ func topMatches(_ candidates: some Sequence<String>,
 func matches(_ candidates: some Sequence<String>,
              against query: FuzzyQuery) -> [MatchResult]
 ```
-
-## Requirements
-
-- Swift 6.2+ (requires span support)
-- macOS 26+ / iOS 26+ / visionOS 26+
-- Likely works with Linux / Windows / WASM with Swift 6.2+ toolchain (pure Swift, no Foundation dependency)
 
 ## License
 

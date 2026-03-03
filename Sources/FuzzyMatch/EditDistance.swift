@@ -71,8 +71,8 @@
 /// ```
 @inlinable
 internal func prefixEditDistance(
-    query: Span<UInt8>,
-    candidate: Span<UInt8>,
+    query: UnsafeBufferPointer<UInt8>,
+    candidate: UnsafeBufferPointer<UInt8>,
     state: inout EditDistanceState,
     maxEditDistance: Int
 ) -> Int? {
@@ -197,8 +197,8 @@ internal func prefixEditDistance(
 /// ```
 @inlinable
 internal func substringEditDistance(
-    query: Span<UInt8>,
-    candidate: Span<UInt8>,
+    query: UnsafeBufferPointer<UInt8>,
+    candidate: UnsafeBufferPointer<UInt8>,
     state: inout EditDistanceState,
     maxEditDistance: Int
 ) -> Int? {

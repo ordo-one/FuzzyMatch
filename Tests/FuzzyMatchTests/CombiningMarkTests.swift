@@ -187,10 +187,12 @@ struct CombiningMarkTests {
         // Boundary at compressed position 0 (h) and 6 (_w → w is boundary)
         let candidate = "ha\u{0308}llo_world"
         let originalBytes = Array(candidate.utf8)
-        let mask = computeBoundaryMaskCompressed(
-            originalBytes: originalBytes.span,
-            isASCII: false
-        )
+        let mask = originalBytes.withUnsafeBufferPointer { ptr in
+            computeBoundaryMaskCompressed(
+                originalBytes: ptr,
+                isASCII: false
+            )
+        }
         // Position 0 should be a boundary (start of string)
         #expect((mask & (1 << 0)) != 0, "Position 0 should be boundary")
         // Position 6 in compressed space = 'w' after '_' should be boundary
@@ -202,10 +204,12 @@ struct CombiningMarkTests {
         // "a\u{0301}Bcd" — combining acute between 'a' and 'B'
         // Compressed: "aBcd" — should have camelCase boundary at position 1 (a→B)
         let bytes = Array("a\u{0301}Bcd".utf8)
-        let mask = computeBoundaryMaskCompressed(
-            originalBytes: bytes.span,
-            isASCII: false
-        )
+        let mask = bytes.withUnsafeBufferPointer { ptr in
+            computeBoundaryMaskCompressed(
+                originalBytes: ptr,
+                isASCII: false
+            )
+        }
         // Position 0: boundary (start of string)
         #expect((mask & (1 << 0)) != 0, "Position 0 should be boundary")
         // Position 1 in compressed space: 'B' after 'a' — camelCase boundary

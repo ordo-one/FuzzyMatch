@@ -13,7 +13,7 @@
 
 /// Storage for lowercased candidate bytes and precomputed per-position bonus values.
 ///
-/// Separated into its own struct to allow Span borrowing without conflicting
+/// Separated into its own struct to allow buffer borrowing without conflicting
 /// with mutation of other scoring state.
 @usableFromInline
 internal struct CandidateStorage: Sendable {
@@ -36,6 +36,24 @@ internal struct CandidateStorage: Sendable {
         if bytes.count < length {
             bytes = [UInt8](repeating: 0, count: length)
             bonus = [Int32](repeating: 0, count: length)
+        }
+    }
+
+    /// Borrows both `bytes` and `bonus` as UnsafeBufferPointers simultaneously.
+    ///
+    /// Used by Smith-Waterman scoring which needs concurrent read access to both buffers.
+    @inlinable
+    func withBorrowedBuffers<R>(
+        length: Int,
+        _ body: (UnsafeBufferPointer<UInt8>, UnsafeBufferPointer<Int32>) -> R
+    ) -> R {
+        bytes.withUnsafeBufferPointer { bytesPtr in
+            bonus.withUnsafeBufferPointer { bonusPtr in
+                body(
+                    UnsafeBufferPointer(rebasing: bytesPtr[0..<length]),
+                    UnsafeBufferPointer(rebasing: bonusPtr[0..<length])
+                )
+            }
         }
     }
 }

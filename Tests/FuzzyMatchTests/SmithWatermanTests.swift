@@ -681,13 +681,19 @@ import Testing
     let bonusValues: [Int32] = [10]
     var state = SmithWatermanState(maxQueryLength: 1)
 
-    let result = smithWatermanScore(
-        query: queryBytes.span,
-        candidate: candidateBytes.span,
-        bonus: bonusValues.span,
-        state: &state,
-        config: .default
-    )
+    let result = queryBytes.withUnsafeBufferPointer { qPtr in
+        candidateBytes.withUnsafeBufferPointer { cPtr in
+            bonusValues.withUnsafeBufferPointer { bPtr in
+                smithWatermanScore(
+                    query: qPtr,
+                    candidate: cPtr,
+                    bonus: bPtr,
+                    state: &state,
+                    config: .default
+                )
+            }
+        }
+    }
 
     #expect(result == 36, "Single char match: 16 + 10*2 = 36")
 }
@@ -702,13 +708,19 @@ import Testing
     let bonusValues: [Int32] = [10, 0]
     var state = SmithWatermanState(maxQueryLength: 2)
 
-    let result = smithWatermanScore(
-        query: queryBytes.span,
-        candidate: candidateBytes.span,
-        bonus: bonusValues.span,
-        state: &state,
-        config: .default
-    )
+    let result = queryBytes.withUnsafeBufferPointer { qPtr in
+        candidateBytes.withUnsafeBufferPointer { cPtr in
+            bonusValues.withUnsafeBufferPointer { bPtr in
+                smithWatermanScore(
+                    query: qPtr,
+                    candidate: cPtr,
+                    bonus: bPtr,
+                    state: &state,
+                    config: .default
+                )
+            }
+        }
+    }
 
     #expect(result == 62, "Two consecutive chars: 36 + 16 + 10 = 62")
 }
@@ -723,13 +735,19 @@ import Testing
     let bonusValues: [Int32] = [10, 0, 0]
     var state = SmithWatermanState(maxQueryLength: 2)
 
-    let result = smithWatermanScore(
-        query: queryBytes.span,
-        candidate: candidateBytes.span,
-        bonus: bonusValues.span,
-        state: &state,
-        config: .default
-    )
+    let result = queryBytes.withUnsafeBufferPointer { qPtr in
+        candidateBytes.withUnsafeBufferPointer { cPtr in
+            bonusValues.withUnsafeBufferPointer { bPtr in
+                smithWatermanScore(
+                    query: qPtr,
+                    candidate: cPtr,
+                    bonus: bPtr,
+                    state: &state,
+                    config: .default
+                )
+            }
+        }
+    }
 
     #expect(result == 36, "Diagonal carry: match starts at position 1, 16 + 16 + 4 = 36")
 }
@@ -741,13 +759,19 @@ import Testing
     let bonusValues: [Int32] = [10, 0, 0]
     var state = SmithWatermanState(maxQueryLength: 1)
 
-    let result = smithWatermanScore(
-        query: queryBytes.span,
-        candidate: candidateBytes.span,
-        bonus: bonusValues.span,
-        state: &state,
-        config: .default
-    )
+    let result = queryBytes.withUnsafeBufferPointer { qPtr in
+        candidateBytes.withUnsafeBufferPointer { cPtr in
+            bonusValues.withUnsafeBufferPointer { bPtr in
+                smithWatermanScore(
+                    query: qPtr,
+                    candidate: cPtr,
+                    bonus: bPtr,
+                    state: &state,
+                    config: .default
+                )
+            }
+        }
+    }
 
     #expect(result == 0, "No match should return 0")
 }
@@ -761,13 +785,19 @@ import Testing
     let bonusValues: [Int32] = [10, 0, 0, 0]
     var state = SmithWatermanState(maxQueryLength: 2)
 
-    let result = smithWatermanScore(
-        query: queryBytes.span,
-        candidate: candidateBytes.span,
-        bonus: bonusValues.span,
-        state: &state,
-        config: .default
-    )
+    let result = queryBytes.withUnsafeBufferPointer { qPtr in
+        candidateBytes.withUnsafeBufferPointer { cPtr in
+            bonusValues.withUnsafeBufferPointer { bPtr in
+                smithWatermanScore(
+                    query: qPtr,
+                    candidate: cPtr,
+                    bonus: bPtr,
+                    state: &state,
+                    config: .default
+                )
+            }
+        }
+    }
 
     #expect(result == 62, "Best score from last column should be 62")
 }

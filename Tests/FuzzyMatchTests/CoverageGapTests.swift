@@ -449,7 +449,7 @@ import Testing
     #expect(state.buffer.count == 10 * 3)
 }
 
-// MARK: - Prefilters: computeCharBitmask(Span<UInt8>) overload
+// MARK: - Prefilters: computeCharBitmask(UnsafeBufferPointer<UInt8>) overload
 
 @Test func computeCharBitmaskSpanOverloadASCII() {
     // Exercise the Span-based computeCharBitmask through Smith-Waterman scoring

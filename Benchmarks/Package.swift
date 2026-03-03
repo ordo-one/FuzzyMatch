@@ -1,13 +1,13 @@
-// swift-tools-version: 6.2
+// swift-tools-version: 6.0
 
 import PackageDescription
 
 let package = Package(
     name: "Benchmarks",
     platforms: [
-        .macOS(.v26),
-        .iOS(.v26),
-        .visionOS(.v26)
+        .macOS(.v15),
+        .iOS(.v18),
+        .visionOS(.v2)
     ],
     dependencies: [
         .package(path: ".."),

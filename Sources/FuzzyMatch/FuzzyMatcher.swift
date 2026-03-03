@@ -158,7 +158,9 @@ public struct FuzzyMatcher: Sendable {
         let utf8Bytes = Array(query.utf8)
         var lowercased = [UInt8](repeating: 0, count: utf8Bytes.count)
         let isASCII = utf8Bytes.allSatisfy { $0 < 0x80 }
-        let lowercasedLength = lowercaseUTF8(from: utf8Bytes.span, into: &lowercased, isASCII: isASCII)
+        let lowercasedLength = utf8Bytes.withUnsafeBufferPointer { ptr in
+            lowercaseUTF8(from: ptr, into: &lowercased, isASCII: isASCII)
+        }
 
         // Truncate to actual length (combining marks may have been stripped)
         if lowercasedLength < lowercased.count {
@@ -281,42 +283,83 @@ public struct FuzzyMatcher: Sendable {
             candidateLength: candidate.utf8.count
         )
         // Dispatch based on matching algorithm
-        switch query.config.algorithm {
-        case .smithWaterman(let swConfig):
-            return scoreSmithWatermanImpl(
-                candidate.utf8.span,
-                against: query,
-                swConfig: swConfig,
-                candidateStorage: &buffer.candidateStorage,
-                smithWatermanState: &buffer.smithWatermanState,
-                wordInitials: &buffer.wordInitials
-            )
+        if let result = candidate.utf8.withContiguousStorageIfAvailable({ candidateUTF8 in
+            switch query.config.algorithm {
+            case .smithWaterman(let swConfig):
+                return scoreSmithWatermanImpl(
+                    candidateUTF8,
+                    against: query,
+                    swConfig: swConfig,
+                    candidateStorage: &buffer.candidateStorage,
+                    smithWatermanState: &buffer.smithWatermanState,
+                    wordInitials: &buffer.wordInitials
+                )
 
-        case .editDistance(let edConfig):
-            // Fast path for 1-character queries: single scan, no buffer needed.
-            // Skip for multi-byte queries (e.g. Latin Extended "à" = 2 UTF-8 bytes).
-            let queryLength = query.lowercased.count
-            if queryLength == 1 {
-                return scoreTinyQuery1(
-                    candidate.utf8.span,
-                    candidateLength: candidate.utf8.count,
-                    q0: query.lowercased[0],
+            case .editDistance(let edConfig):
+                // Fast path for 1-character queries: single scan, no buffer needed.
+                // Skip for multi-byte queries (e.g. Latin Extended "à" = 2 UTF-8 bytes).
+                let queryLength = query.lowercased.count
+                if queryLength == 1 {
+                    return scoreTinyQuery1(
+                        candidateUTF8,
+                        candidateLength: candidateUTF8.count,
+                        q0: query.lowercased[0],
+                        edConfig: edConfig,
+                        minScore: query.config.minScore
+                    )
+                }
+
+                // Pass components separately to avoid exclusivity conflicts
+                return scoreImpl(
+                    candidateUTF8,
+                    against: query,
                     edConfig: edConfig,
-                    minScore: query.config.minScore
+                    candidateStorage: &buffer.candidateStorage,
+                    editDistanceState: &buffer.editDistanceState,
+                    matchPositions: &buffer.matchPositions,
+                    alignmentState: &buffer.alignmentState,
+                    wordInitials: &buffer.wordInitials
                 )
             }
+        }) {
+            return result
+        }
+        // Fallback for bridged strings without contiguous storage
+        let bytes = Array(candidate.utf8)
+        return bytes.withUnsafeBufferPointer { candidateUTF8 in
+            switch query.config.algorithm {
+            case .smithWaterman(let swConfig):
+                return scoreSmithWatermanImpl(
+                    candidateUTF8,
+                    against: query,
+                    swConfig: swConfig,
+                    candidateStorage: &buffer.candidateStorage,
+                    smithWatermanState: &buffer.smithWatermanState,
+                    wordInitials: &buffer.wordInitials
+                )
 
-            // Pass components separately to avoid exclusivity conflicts with Span borrowing
-            return scoreImpl(
-                candidate.utf8.span,
-                against: query,
-                edConfig: edConfig,
-                candidateStorage: &buffer.candidateStorage,
-                editDistanceState: &buffer.editDistanceState,
-                matchPositions: &buffer.matchPositions,
-                alignmentState: &buffer.alignmentState,
-                wordInitials: &buffer.wordInitials
-            )
+            case .editDistance(let edConfig):
+                let queryLength = query.lowercased.count
+                if queryLength == 1 {
+                    return scoreTinyQuery1(
+                        candidateUTF8,
+                        candidateLength: candidateUTF8.count,
+                        q0: query.lowercased[0],
+                        edConfig: edConfig,
+                        minScore: query.config.minScore
+                    )
+                }
+                return scoreImpl(
+                    candidateUTF8,
+                    against: query,
+                    edConfig: edConfig,
+                    candidateStorage: &buffer.candidateStorage,
+                    editDistanceState: &buffer.editDistanceState,
+                    matchPositions: &buffer.matchPositions,
+                    alignmentState: &buffer.alignmentState,
+                    wordInitials: &buffer.wordInitials
+                )
+            }
         }
     }
 
@@ -339,14 +382,12 @@ public struct FuzzyMatcher: Sendable {
 
     // MARK: - scoreImpl Orchestrator
 
-    /// Internal scoring implementation using Span for safe, efficient byte access.
+    /// Internal scoring implementation using UnsafeBufferPointer for efficient byte access.
     ///
     /// Takes buffer components as separate parameters to avoid exclusivity conflicts.
-    /// When a Span borrows from candidateStorage.bytes, we can still mutate
-    /// editDistanceState, matchPositions, and alignmentState because they're separate parameters.
     @inlinable
     internal func scoreImpl(
-        _ candidateUTF8: Span<UInt8>,
+        _ candidateUTF8: UnsafeBufferPointer<UInt8>,
         against query: FuzzyQuery,
         edConfig: EditDistanceConfig,
         candidateStorage: inout CandidateStorage,
@@ -393,11 +434,10 @@ public struct FuzzyMatcher: Sendable {
 
         let actualCandidateLength = lowercaseUTF8(from: candidateUTF8, into: &candidateStorage.bytes, isASCII: candidateIsASCII)
 
-        // Get span from candidateStorage - this borrows from candidateStorage parameter,
-        // which allows us to mutate editDistanceState and matchPositions (separate parameters)
-        let candidateSpan = candidateStorage.bytes.span.extracting(0..<actualCandidateLength)
-        let querySpan = query.lowercased.span
-
+        // Borrow buffers via withUnsafeBufferPointer for the rest of the scoring pipeline
+        return candidateStorage.bytes.withUnsafeBufferPointer { bytesPtr in
+        let candidateSpan = UnsafeBufferPointer(rebasing: bytesPtr[0..<actualCandidateLength])
+        return query.lowercased.withUnsafeBufferPointer { querySpan in
         // Prefilter 3: Trigrams (only if query has enough trigrams to be selective)
         // Skip when threshold (queryTrigrams.count - 3*maxED) is non-positive,
         // since the filter would accept every candidate anyway.
@@ -495,6 +535,8 @@ public struct FuzzyMatcher: Sendable {
         }
 
         return nil
+        } // querySpan
+        } // candidateSpan
     }
 
     // MARK: - Phase Methods
@@ -520,8 +562,8 @@ public struct FuzzyMatcher: Sendable {
     /// Returns the prefix distance (nil if prefix ED exceeded threshold).
     @inlinable
     internal func scorePrefix(
-        querySpan: Span<UInt8>,
-        candidateSpan: Span<UInt8>,
+        querySpan: UnsafeBufferPointer<UInt8>,
+        candidateSpan: UnsafeBufferPointer<UInt8>,
         query: FuzzyQuery,
         edConfig: EditDistanceConfig,
         candidateLength: Int,
@@ -611,8 +653,8 @@ public struct FuzzyMatcher: Sendable {
     /// Phase 4: Substring edit distance scoring.
     @inlinable
     internal func scoreSubstring(
-        querySpan: Span<UInt8>,
-        candidateSpan: Span<UInt8>,
+        querySpan: UnsafeBufferPointer<UInt8>,
+        candidateSpan: UnsafeBufferPointer<UInt8>,
         query: FuzzyQuery,
         edConfig: EditDistanceConfig,
         candidateLength: Int,
@@ -752,8 +794,8 @@ public struct FuzzyMatcher: Sendable {
     /// Phase 5: Subsequence (gap-based) scoring fallback.
     @inlinable
     internal func scoreSubsequence(
-        querySpan: Span<UInt8>,
-        candidateSpan: Span<UInt8>,
+        querySpan: UnsafeBufferPointer<UInt8>,
+        candidateSpan: UnsafeBufferPointer<UInt8>,
         query: FuzzyQuery,
         edConfig: EditDistanceConfig,
         candidateLength: Int,
@@ -827,9 +869,9 @@ public struct FuzzyMatcher: Sendable {
     /// Phase 6: Acronym (word-initial) matching.
     @inlinable
     internal func scoreAcronym(
-        querySpan: Span<UInt8>,
-        candidateSpan: Span<UInt8>,
-        candidateUTF8: Span<UInt8>,
+        querySpan: UnsafeBufferPointer<UInt8>,
+        candidateSpan: UnsafeBufferPointer<UInt8>,
+        candidateUTF8: UnsafeBufferPointer<UInt8>,
         query: FuzzyQuery,
         candidateLength: Int,
         acronymWeight: Double,
@@ -903,8 +945,8 @@ public struct FuzzyMatcher: Sendable {
     /// Computes alignment if not already cached, updating state. Returns (positionCount, bonus).
     @inlinable
     internal func computeAlignmentIfNeeded(
-        querySpan: Span<UInt8>,
-        candidateSpan: Span<UInt8>,
+        querySpan: UnsafeBufferPointer<UInt8>,
+        candidateSpan: UnsafeBufferPointer<UInt8>,
         query: FuzzyQuery,
         edConfig: EditDistanceConfig,
         state: inout ScoringState,
@@ -952,7 +994,7 @@ public struct FuzzyMatcher: Sendable {
     /// Single-character query fast path.
     @inlinable
     internal func scoreTinyQuery1(
-        _ candidateUTF8: Span<UInt8>,
+        _ candidateUTF8: UnsafeBufferPointer<UInt8>,
         candidateLength: Int,
         q0: UInt8,
         edConfig: EditDistanceConfig,

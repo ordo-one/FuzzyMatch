@@ -10,8 +10,6 @@ swift test               # Run all tests
 swift package --package-path Benchmarks benchmark  # Run benchmark suite (release build)
 ```
 
-Requires Swift 6.2+ and macOS 26+.
-
 ## Before Submitting a PR
 
 1. **All tests pass** — `swift test` must be green.

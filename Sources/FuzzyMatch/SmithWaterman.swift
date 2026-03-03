@@ -47,9 +47,9 @@
 /// - Returns: The raw Int32 alignment score, or 0 if no alignment found.
 @inlinable
 func smithWatermanScore(
-    query: Span<UInt8>,
-    candidate: Span<UInt8>,
-    bonus: Span<Int32>,
+    query: UnsafeBufferPointer<UInt8>,
+    candidate: UnsafeBufferPointer<UInt8>,
+    bonus: UnsafeBufferPointer<Int32>,
     state: inout SmithWatermanState,
     config: SmithWatermanConfig
 ) -> Int32 {
