@@ -14,7 +14,7 @@ For detailed algorithm internals, see [DAMERAU_LEVENSHTEIN.md](DAMERAU_LEVENSHTE
 | **Typo handling** | Native transposition support | No transposition operation |
 | **Prefix awareness** | Explicit prefix scoring phase | No prefix concept (treats all substrings equally) |
 | **Multi-word queries** | Treated monolithically | Atom splitting with AND semantics |
-| **Throughput** | ~31M candidates/sec | ~61M candidates/sec |
+| **Throughput** | ~32M candidates/sec | ~66M candidates/sec |
 | **Coverage (272K corpus)** | 197/197 queries | 187/197 queries |
 
 ## Usage
@@ -84,7 +84,7 @@ For multi-word queries, each word is scored independently with AND semantics (al
 
 ### Strengths
 
-- **Throughput**: ~61M candidates/sec -- ~2x faster than edit distance mode. The single DP pass with integer arithmetic is very cache-friendly.
+- **Throughput**: ~66M candidates/sec -- ~2x faster than edit distance mode. The single DP pass with integer arithmetic is very cache-friendly.
 
 - **Multi-word queries**: Atom splitting with AND semantics handles "ishares usd treasury" and "vanguard ftse europe" naturally, with each word scored independently against the candidate.
 

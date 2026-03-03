@@ -85,14 +85,14 @@ case .editDistance(let edConfig):
 }
 ```
 
-### 4. Replace UnsafeBufferPointer(rebasing:) with .extracting()
+### 4. Replace withUnsafeBufferPointer / withReadBuffers with .span.extracting()
 
 In `FuzzyMatcher.swift` — `scoreImpl`:
 ```swift
 // Before:
 return candidateStorage.bytes.withUnsafeBufferPointer { bytesPtr in
     let candidateSpan = UnsafeBufferPointer(rebasing: bytesPtr[0..<actualCandidateLength])
-    return query.lowercased.withUnsafeBufferPointer { querySpan in
+    return query.lowercased.withUnsafeBufferPointer { querySpan -> ScoredMatch? in
         ...
     }
 }
@@ -104,21 +104,28 @@ let querySpan = query.lowercased.span
 
 In `FuzzyMatcher+SmithWaterman.swift` — `scoreSmithWatermanImpl`:
 ```swift
-// Before: candidateStorage.withBorrowedBuffers(length:) { candidateSpan, bonusSpan in ... }
+// Before:
+return candidateStorage.withReadBuffers(length: actualCandidateLength) { candidateSpan, bonusSpan in
+    return query.lowercased.withUnsafeBufferPointer { querySpan -> ScoredMatch? in
+        ...
+    }
+}
+
 // After:
 let candidateSpan = candidateStorage.bytes.span.extracting(0..<actualCandidateLength)
 let bonusSpan = candidateStorage.bonus.span.extracting(0..<actualCandidateLength)
+let querySpan = query.lowercased.span
 ```
 
 For multi-atom paths:
 ```swift
-// Before: query.lowercased.withUnsafeBufferPointer { ... UnsafeBufferPointer(rebasing: ...) }
+// Before: UnsafeBufferPointer(rebasing: querySpan[atom.start..<(atom.start + atom.length)])
 // After:  query.lowercased.span.extracting(atom.start..<(atom.start + atom.length))
 ```
 
-### 5. Remove withBorrowedBuffers helper
+### 5. Remove withReadBuffers helper
 
-Delete the `withBorrowedBuffers` method from `CandidateStorage` in `ScoringBuffer.swift`. It was added specifically for the UnsafeBufferPointer migration.
+Delete the `withReadBuffers` method from `CandidateStorage` in `ScoringBuffer.swift`. It was added specifically for the UnsafeBufferPointer migration.
 
 ### 6. Update test files
 

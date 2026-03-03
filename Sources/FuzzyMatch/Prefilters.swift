@@ -257,6 +257,7 @@ internal func lowercaseUTF8(
     isASCII: Bool
 ) -> Int {
     let count = source.count
+    if count == 0 { return 0 }
     // Use withUnsafeMutableBufferPointer to bypass Array.subscript.modify coroutine
     // overhead. Each array subscript write normally goes through a yield-once coroutine
     // with bounds checking; direct pointer writes eliminate this for the O(n) pass.

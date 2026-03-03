@@ -450,48 +450,7 @@ public struct FuzzyMatcher: Sendable {
 
         let actualCandidateLength = lowercaseUTF8(from: candidateUTF8, into: &candidateStorage.bytes, isASCII: candidateIsASCII)
 
-        // Obtain buffer pointers outside closures so scoring functions are called directly,
-        // enabling cross-function inlining of the phase methods. Safe because:
-        // - query.lowercased is immutable and lives for this call's duration
-        // - candidateStorage bytes were sized by ensureCapacity and won't be resized
-        let candidateSpan = candidateStorage.bytes.withUnsafeBufferPointer {
-            UnsafeBufferPointer(rebasing: $0[0..<actualCandidateLength])
-        }
-        let querySpan = query.lowercased.withUnsafeBufferPointer { $0 }
-
-        // Prefilter 3: Trigrams (only if query has enough trigrams to be selective)
-        // Skip when threshold (queryTrigrams.count - 3*maxED) is non-positive,
-        // since the filter would accept every candidate anyway.
-        // Space-containing trigrams are excluded at computation time, so this
-        // is safe for multi-word queries (see computeTrigrams for rationale).
-        if query.lowercased.count >= 4
-            && query.trigrams.count > 3 * effectiveMaxEditDistance {
-            if !passesTrigramFilter(
-                candidateBytes: candidateSpan,
-                queryTrigrams: query.trigrams,
-                maxEditDistance: effectiveMaxEditDistance
-            ) {
-                return nil
-            }
-        }
-
-        // Compute word boundary mask for bonus calculation
-        // Use the ORIGINAL (non-lowercased) bytes to detect camelCase transitions,
-        // but assign bits at compressed (post-lowercasing) positions so they align
-        // with candidateSpan indices used downstream.
-        let boundaryMask = computeBoundaryMaskCompressed(originalBytes: candidateUTF8, isASCII: candidateIsASCII)
-
-        let needsAlignment = edConfig.wordBoundaryBonus > 0
-            || edConfig.consecutiveBonus > 0
-            || edConfig.gapPenalty != .none
-            || edConfig.firstMatchBonus > 0
-
-        var state = ScoringState()
-        state.boundaryMask = boundaryMask
-        state.effectiveMaxEditDistance = effectiveMaxEditDistance
-        state.needsAlignment = needsAlignment
-
-        // Phase 2: Exact match (early exit)
+        // Phase 2: Exact match (early exit — before buffer pointers, uses Array subscript)
         if let exact = checkExactMatch(
             candidateBytes: candidateStorage.bytes,
             query: query,
@@ -500,62 +459,99 @@ public struct FuzzyMatcher: Sendable {
             return exact
         }
 
-        // Phase 3: Prefix scoring
-        let prefixDistance = scorePrefix(
-            querySpan: querySpan,
-            candidateSpan: candidateSpan,
-            query: query,
-            edConfig: edConfig,
-            candidateLength: actualCandidateLength,
-            state: &state,
-            editDistanceState: &editDistanceState,
-            matchPositions: &matchPositions,
-            alignmentState: &alignmentState
-        )
+        return candidateStorage.bytes.withUnsafeBufferPointer { bytesPtr in
+            let candidateSpan = UnsafeBufferPointer(rebasing: bytesPtr[0..<actualCandidateLength])
+            return query.lowercased.withUnsafeBufferPointer { querySpan -> ScoredMatch? in
+                // Prefilter 3: Trigrams (only if query has enough trigrams to be selective)
+                // Skip when threshold (queryTrigrams.count - 3*maxED) is non-positive,
+                // since the filter would accept every candidate anyway.
+                // Space-containing trigrams are excluded at computation time, so this
+                // is safe for multi-word queries (see computeTrigrams for rationale).
+                if query.lowercased.count >= 4
+                    && query.trigrams.count > 3 * effectiveMaxEditDistance {
+                    if !passesTrigramFilter(
+                        candidateBytes: candidateSpan,
+                        queryTrigrams: query.trigrams,
+                        maxEditDistance: effectiveMaxEditDistance
+                    ) {
+                        return nil
+                    }
+                }
 
-        // Phase 4: Substring scoring
-        scoreSubstring(
-            querySpan: querySpan,
-            candidateSpan: candidateSpan,
-            query: query,
-            edConfig: edConfig,
-            candidateLength: actualCandidateLength,
-            prefixDistance: prefixDistance,
-            state: &state,
-            editDistanceState: &editDistanceState,
-            matchPositions: &matchPositions,
-            alignmentState: &alignmentState
-        )
+                // Compute word boundary mask for bonus calculation
+                // Use the ORIGINAL (non-lowercased) bytes to detect camelCase transitions,
+                // but assign bits at compressed (post-lowercasing) positions so they align
+                // with candidateSpan indices used downstream.
+                let boundaryMask = computeBoundaryMaskCompressed(originalBytes: candidateUTF8, isASCII: candidateIsASCII)
 
-        // Phase 5: Subsequence scoring
-        scoreSubsequence(
-            querySpan: querySpan,
-            candidateSpan: candidateSpan,
-            query: query,
-            edConfig: edConfig,
-            candidateLength: actualCandidateLength,
-            state: &state,
-            matchPositions: &matchPositions,
-            alignmentState: &alignmentState
-        )
+                let needsAlignment = edConfig.wordBoundaryBonus > 0
+                    || edConfig.consecutiveBonus > 0
+                    || edConfig.gapPenalty != .none
+                    || edConfig.firstMatchBonus > 0
 
-        // Phase 6: Acronym scoring
-        scoreAcronym(
-            querySpan: querySpan,
-            candidateSpan: candidateSpan,
-            candidateUTF8: candidateUTF8,
-            query: query,
-            candidateLength: actualCandidateLength,
-            acronymWeight: edConfig.acronymWeight,
-            state: &state,
-            wordInitials: &wordInitials
-        )
+                var state = ScoringState()
+                state.boundaryMask = boundaryMask
+                state.effectiveMaxEditDistance = effectiveMaxEditDistance
+                state.needsAlignment = needsAlignment
 
-        if state.bestScore >= query.config.minScore {
-            return ScoredMatch(score: state.bestScore, kind: state.bestKind)
+                // Phase 3: Prefix scoring
+                let prefixDistance = scorePrefix(
+                    querySpan: querySpan,
+                    candidateSpan: candidateSpan,
+                    query: query,
+                    edConfig: edConfig,
+                    candidateLength: actualCandidateLength,
+                    state: &state,
+                    editDistanceState: &editDistanceState,
+                    matchPositions: &matchPositions,
+                    alignmentState: &alignmentState
+                )
+
+                // Phase 4: Substring scoring
+                scoreSubstring(
+                    querySpan: querySpan,
+                    candidateSpan: candidateSpan,
+                    query: query,
+                    edConfig: edConfig,
+                    candidateLength: actualCandidateLength,
+                    prefixDistance: prefixDistance,
+                    state: &state,
+                    editDistanceState: &editDistanceState,
+                    matchPositions: &matchPositions,
+                    alignmentState: &alignmentState
+                )
+
+                // Phase 5: Subsequence scoring
+                scoreSubsequence(
+                    querySpan: querySpan,
+                    candidateSpan: candidateSpan,
+                    query: query,
+                    edConfig: edConfig,
+                    candidateLength: actualCandidateLength,
+                    state: &state,
+                    matchPositions: &matchPositions,
+                    alignmentState: &alignmentState
+                )
+
+                // Phase 6: Acronym scoring
+                scoreAcronym(
+                    querySpan: querySpan,
+                    candidateSpan: candidateSpan,
+                    candidateUTF8: candidateUTF8,
+                    query: query,
+                    candidateLength: actualCandidateLength,
+                    acronymWeight: edConfig.acronymWeight,
+                    state: &state,
+                    wordInitials: &wordInitials
+                )
+
+                if state.bestScore >= query.config.minScore {
+                    return ScoredMatch(score: state.bestScore, kind: state.bestKind)
+                }
+
+                return nil
+            }
         }
-
-        return nil
     }
 
     // MARK: - Phase Methods

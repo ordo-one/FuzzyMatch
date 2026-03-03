@@ -326,109 +326,101 @@ extension FuzzyMatcher {
             }
         }
 
-        // Obtain buffer pointers outside closures so scoring functions are called directly,
-        // enabling cross-function inlining. Safe because:
-        // - query.lowercased is immutable and lives for this call's duration
-        // - candidateStorage bytes/bonus were sized by ensureCapacity and won't be resized
-        let candidateSpan = candidateStorage.bytes.withUnsafeBufferPointer {
-            UnsafeBufferPointer(rebasing: $0[0..<actualCandidateLength])
-        }
-        let bonusSpan = candidateStorage.bonus.withUnsafeBufferPointer {
-            UnsafeBufferPointer(rebasing: $0[0..<actualCandidateLength])
-        }
-        let querySpan = query.lowercased.withUnsafeBufferPointer { $0 }
+        return candidateStorage.withReadBuffers(length: actualCandidateLength) { candidateSpan, bonusSpan in
+            return query.lowercased.withUnsafeBufferPointer { querySpan -> ScoredMatch? in
+                if query.atoms.count > 1 {
+                    // Multi-atom path: score each word independently, AND semantics
+                    var totalRawScore: Int32 = 0
+                    for atom in query.atoms {
+                        let atomQuery = UnsafeBufferPointer(
+                            rebasing: querySpan[atom.start..<(atom.start + atom.length)]
+                        )
+                        let atomScore = smithWatermanScore(
+                            query: atomQuery,
+                            candidate: candidateSpan,
+                            bonus: bonusSpan,
+                            state: &smithWatermanState,
+                            config: sw
+                        )
+                        if atomScore <= 0 {
+                            return nil
+                        }
+                        totalRawScore += atomScore
+                    }
 
-        if query.atoms.count > 1 {
-            // Multi-atom path: score each word independently, AND semantics
-            var totalRawScore: Int32 = 0
-            for atom in query.atoms {
-                let atomQuery = UnsafeBufferPointer(
-                    rebasing: querySpan[atom.start..<(atom.start + atom.length)]
-                )
-                let atomScore = smithWatermanScore(
-                    query: atomQuery,
+                    let maxScore = query.maxSmithWatermanScore
+                    guard maxScore > 0 else { return nil }
+                    let normalizedScore = min(1.0, max(0.0, Double(totalRawScore) / Double(maxScore)))
+                    if normalizedScore >= query.config.minScore {
+                        return ScoredMatch(score: normalizedScore, kind: .alignment)
+                    }
+                    return nil
+                }
+
+                // Single-word path
+                // Run Smith-Waterman DP with precomputed bonus array
+                let rawScore = smithWatermanScore(
+                    query: querySpan,
                     candidate: candidateSpan,
                     bonus: bonusSpan,
                     state: &smithWatermanState,
                     config: sw
                 )
-                if atomScore <= 0 {
-                    return nil
-                }
-                totalRawScore += atomScore
-            }
 
-            let maxScore = query.maxSmithWatermanScore
-            guard maxScore > 0 else { return nil }
-            let normalizedScore = min(1.0, max(0.0, Double(totalRawScore) / Double(maxScore)))
-            if normalizedScore >= query.config.minScore {
-                return ScoredMatch(score: normalizedScore, kind: .alignment)
-            }
-            return nil
-        }
+                // Compute best SW score
+                var bestScore: Double = -1
+                var bestKind: MatchKind = .alignment
 
-        // Single-word path
-        // Run Smith-Waterman DP with precomputed bonus array
-        let rawScore = smithWatermanScore(
-            query: querySpan,
-            candidate: candidateSpan,
-            bonus: bonusSpan,
-            state: &smithWatermanState,
-            config: sw
-        )
-
-        // Compute best SW score
-        var bestScore: Double = -1
-        var bestKind: MatchKind = .alignment
-
-        if rawScore > 0 {
-            let maxScore = query.maxSmithWatermanScore
-            if maxScore > 0 {
-                let normalizedScore = min(1.0, max(0.0, Double(rawScore) / Double(maxScore)))
-                if normalizedScore >= query.config.minScore {
-                    bestScore = normalizedScore
-                }
-            }
-        }
-
-        // Acronym fallback: compete with SW score for short queries (2-8 chars)
-        if queryLength >= 2 && queryLength <= 8 {
-            let boundaryMask = computeBoundaryMaskCompressed(originalBytes: candidateUTF8, isASCII: candidateIsASCII)
-            var wordCount = boundaryMask.nonzeroBitCount
-            if actualCandidateLength > 64 {
-                for i in 64..<actualCandidateLength {
-                    if isWordBoundary(at: i, in: candidateSpan) {
-                        wordCount += 1
+                if rawScore > 0 {
+                    let maxScore = query.maxSmithWatermanScore
+                    if maxScore > 0 {
+                        let normalizedScore = min(1.0, max(0.0, Double(rawScore) / Double(maxScore)))
+                        if normalizedScore >= query.config.minScore {
+                            bestScore = normalizedScore
+                        }
                     }
                 }
-            }
-            if wordCount >= 3 && wordCount >= queryLength {
-                var acronymState = ScoringState()
-                acronymState.boundaryMask = boundaryMask
-                acronymState.bestScore = bestScore
 
-                scoreAcronym(
-                    querySpan: querySpan,
-                    candidateSpan: candidateSpan,
-                    candidateUTF8: candidateUTF8,
-                    query: query,
-                    candidateLength: actualCandidateLength,
-                    acronymWeight: 1.0,
-                    state: &acronymState,
-                    wordInitials: &wordInitials
-                )
+                // Acronym fallback: compete with SW score for short queries (2-8 chars)
+                if queryLength >= 2 && queryLength <= 8 {
+                    let boundaryMask = computeBoundaryMaskCompressed(originalBytes: candidateUTF8, isASCII: candidateIsASCII)
+                    var wordCount = boundaryMask.nonzeroBitCount
+                    if actualCandidateLength > 64 {
+                        for i in 64..<actualCandidateLength {
+                            if isWordBoundary(at: i, in: candidateSpan) {
+                                wordCount += 1
+                            }
+                        }
+                    }
+                    if wordCount >= 3 && wordCount >= queryLength {
+                        var acronymState = ScoringState()
+                        acronymState.boundaryMask = boundaryMask
+                        acronymState.bestScore = bestScore
 
-                if acronymState.bestScore > bestScore {
-                    bestScore = acronymState.bestScore
-                    bestKind = acronymState.bestKind
+                        scoreAcronym(
+                            querySpan: querySpan,
+                            candidateSpan: candidateSpan,
+                            candidateUTF8: candidateUTF8,
+                            query: query,
+                            candidateLength: actualCandidateLength,
+                            acronymWeight: 1.0,
+                            state: &acronymState,
+                            wordInitials: &wordInitials
+                        )
+
+                        if acronymState.bestScore > bestScore {
+                            bestScore = acronymState.bestScore
+                            bestKind = acronymState.bestKind
+                        }
+                    }
                 }
+
+                if bestScore >= query.config.minScore {
+                    return ScoredMatch(score: bestScore, kind: bestKind)
+                }
+
+                return nil
             }
         }
-
-        if bestScore >= query.config.minScore {
-            return ScoredMatch(score: bestScore, kind: bestKind)
-        }
-
-        return nil
     }
 }

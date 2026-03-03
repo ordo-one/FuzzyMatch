@@ -39,6 +39,27 @@ internal struct CandidateStorage: Sendable {
         }
     }
 
+    /// Provides immutable buffer pointer access to both `bytes` and `bonus` simultaneously.
+    ///
+    /// Non-mutating read-only counterpart to ``withMutableBuffers``.
+    /// Must be a method on `self` so Swift sees disjoint access to stored properties
+    /// (calling `bytes.withUnsafeBufferPointer` then `bonus.withUnsafeBufferPointer`
+    /// from outside would trigger an overlapping-access error on the struct).
+    @inlinable
+    func withReadBuffers<R>(
+        length: Int,
+        _ body: (UnsafeBufferPointer<UInt8>, UnsafeBufferPointer<Int32>) -> R
+    ) -> R {
+        bytes.withUnsafeBufferPointer { bytesPtr in
+            bonus.withUnsafeBufferPointer { bonusPtr in
+                body(
+                    UnsafeBufferPointer(rebasing: bytesPtr[0..<length]),
+                    UnsafeBufferPointer(rebasing: bonusPtr[0..<length])
+                )
+            }
+        }
+    }
+
     /// Provides mutable raw pointer access to both `bytes` and `bonus` simultaneously.
     ///
     /// Eliminates `Array.subscript.modify` coroutine overhead in hot loops where
