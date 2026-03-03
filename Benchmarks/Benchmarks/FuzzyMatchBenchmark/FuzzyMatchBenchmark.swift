@@ -462,6 +462,80 @@ let benchmarks: @Sendable () -> Void = {
         }
     }
 
+    // MARK: - Full Scoring Benchmarks (UTF-8 API)
+
+    Benchmark(
+        "Full scoring - 5 char query (UTF-8)",
+        configuration: configKilo
+    ) { benchmark in
+        let smallDataset = DatasetHolder.shared.smallDataset
+        let matcher = FuzzyMatcher()
+        let query = matcher.prepare("getUs")
+        var buffer = matcher.makeBuffer()
+
+        for _ in benchmark.scaledIterations {
+            for var candidate in smallDataset {
+                candidate.withUTF8 { utf8 in
+                    blackHole(matcher.score(utf8: utf8, against: query, buffer: &buffer))
+                }
+            }
+        }
+    }
+
+    Benchmark(
+        "Full scoring - 10 char query (UTF-8)",
+        configuration: configKilo
+    ) { benchmark in
+        let smallDataset = DatasetHolder.shared.smallDataset
+        let matcher = FuzzyMatcher()
+        let query = matcher.prepare("getUserByI")
+        var buffer = matcher.makeBuffer()
+
+        for _ in benchmark.scaledIterations {
+            for var candidate in smallDataset {
+                candidate.withUTF8 { utf8 in
+                    blackHole(matcher.score(utf8: utf8, against: query, buffer: &buffer))
+                }
+            }
+        }
+    }
+
+    Benchmark(
+        "SW - 5 char query (UTF-8)",
+        configuration: configKilo
+    ) { benchmark in
+        let smallDataset = DatasetHolder.shared.smallDataset
+        let matcher = FuzzyMatcher(config: .smithWaterman)
+        let query = matcher.prepare("getUs")
+        var buffer = matcher.makeBuffer()
+
+        for _ in benchmark.scaledIterations {
+            for var candidate in smallDataset {
+                candidate.withUTF8 { utf8 in
+                    blackHole(matcher.score(utf8: utf8, against: query, buffer: &buffer))
+                }
+            }
+        }
+    }
+
+    Benchmark(
+        "SW - 10 char query (UTF-8)",
+        configuration: configKilo
+    ) { benchmark in
+        let smallDataset = DatasetHolder.shared.smallDataset
+        let matcher = FuzzyMatcher(config: .smithWaterman)
+        let query = matcher.prepare("getUserByI")
+        var buffer = matcher.makeBuffer()
+
+        for _ in benchmark.scaledIterations {
+            for var candidate in smallDataset {
+                candidate.withUTF8 { utf8 in
+                    blackHole(matcher.score(utf8: utf8, against: query, buffer: &buffer))
+                }
+            }
+        }
+    }
+
     // MARK: - Full Dataset Single-threaded Benchmark
 
     Benchmark(

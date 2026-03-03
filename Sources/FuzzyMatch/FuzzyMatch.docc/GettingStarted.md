@@ -83,6 +83,20 @@ for candidate in candidates {
 }
 ```
 
+For maximum throughput, use ``FuzzyMatcher/score(utf8:against:buffer:)`` with pre-extracted UTF-8 bytes. This `@inlinable` method enables cross-module inlining that the String overload cannot achieve on Swift 6.0, delivering ~60% higher throughput:
+
+```swift
+for var candidate in candidates {
+    candidate.withUTF8 { utf8 in
+        if let match = matcher.score(utf8: utf8, against: query, buffer: &buffer) {
+            print("score=\(match.score)")
+        }
+    }
+}
+```
+
+> Note: This performance gap is a Swift 6.0 limitation. When the library adopts Swift 6.2+ Span, the String API will recover full throughput and this method may be deprecated.
+
 ## Understanding Match Kinds
 
 Every successful match includes a ``MatchKind`` that tells you where the query matched:

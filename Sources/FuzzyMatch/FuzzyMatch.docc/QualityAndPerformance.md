@@ -107,13 +107,16 @@ This design is critical for responsive UI and high-throughput batch processing s
 
 ### Choosing the Right API
 
-FuzzyMatch provides two API levels that produce identical results:
+FuzzyMatch provides three API tiers that produce identical results:
 
-| API | When to use | Allocations |
-|-----|-------------|-------------|
-| ``FuzzyMatcher/score(_:against:buffer:)`` | Production hot paths, interactive search, batch processing | Zero (after buffer warmup) |
-| ``FuzzyMatcher/score(_:against:)`` | One-off checks, prototyping | Per-call (buffer + query) |
-| ``FuzzyMatcher/topMatches(_:against:limit:)`` | Quick top-N results | Per-call (buffer) |
-| ``FuzzyMatcher/matches(_:against:)`` | Quick sorted results | Per-call (buffer) |
+| API | When to use | Allocations | Throughput |
+|-----|-------------|-------------|------------|
+| ``FuzzyMatcher/score(utf8:against:buffer:)`` | Maximum throughput hot paths | Zero (after buffer warmup) | Highest (~60% faster on Swift 6.0) |
+| ``FuzzyMatcher/score(_:against:buffer:)`` | Production hot paths with String inputs | Zero (after buffer warmup) | High |
+| ``FuzzyMatcher/score(_:against:)`` | One-off checks, prototyping | Per-call (buffer + query) | — |
+| ``FuzzyMatcher/topMatches(_:against:limit:)`` | Quick top-N results | Per-call (buffer) | — |
+| ``FuzzyMatcher/matches(_:against:)`` | Quick sorted results | Per-call (buffer) | — |
+
+The ``FuzzyMatcher/score(utf8:against:buffer:)`` method is `@inlinable` and accepts `UnsafeBufferPointer<UInt8>` directly, enabling cross-module inlining. On Swift 6.0, `String.withUTF8` is non-inlinable, which prevents the optimizer from inlining through the String overload. This gap will be resolved when the library adopts Swift 6.2+ Span.
 
 The convenience methods (``FuzzyMatcher/score(_:against:)``, ``FuzzyMatcher/topMatches(_:against:limit:)``, ``FuzzyMatcher/matches(_:against:)``) allocate a buffer internally on each call. For scoring loops over many candidates, the high-performance API with an explicit buffer avoids this overhead entirely.

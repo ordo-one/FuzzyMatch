@@ -293,8 +293,28 @@ public struct FuzzyMatcher: Sendable {
 
     /// Scores pre-extracted UTF-8 bytes against a prepared query.
     ///
-    /// This method bypasses the String-to-pointer conversion overhead, making it
-    /// suitable for callers that already have access to the candidate's UTF-8 bytes.
+    /// This `@inlinable` method accepts an `UnsafeBufferPointer<UInt8>` directly,
+    /// letting the optimizer inline through the entire scoring path across module
+    /// boundaries. On Swift 6.0, `String.withUTF8` is non-inlinable, which prevents
+    /// cross-module optimization for the ``score(_:against:buffer:)`` overload. By
+    /// calling `withUTF8` yourself and passing the buffer here, you recover full
+    /// inlining — typically ~60% higher throughput than the String overload.
+    ///
+    /// When the library adopts Swift 6.2+ Span, the String API will recover full
+    /// throughput via zero-cost contiguous access without closure overhead. At that
+    /// point this method may be deprecated.
+    ///
+    /// ```swift
+    /// let matcher = FuzzyMatcher()
+    /// let query = matcher.prepare("getUser")
+    /// var buffer = matcher.makeBuffer()
+    /// var candidate = "getUserById"
+    /// candidate.withUTF8 { utf8 in
+    ///     if let match = matcher.score(utf8: utf8, against: query, buffer: &buffer) {
+    ///         print(match.score)
+    ///     }
+    /// }
+    /// ```
     ///
     /// - Parameters:
     ///   - candidateUTF8: A buffer pointer to the candidate's UTF-8 bytes.

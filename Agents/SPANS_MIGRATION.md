@@ -122,18 +122,28 @@ Delete the `withBorrowedBuffers` method from `CandidateStorage` in `ScoringBuffe
 
 ### 6. Update test files
 
-Replace `withUnsafeBufferPointer` closures with `.span`:
+**Delete `Tests/FuzzyMatchTests/TestHelpers.swift`** — the array-accepting wrappers are no longer needed since `.span` provides direct access.
+
+**Update test call sites** — add `.span` to array arguments:
+
+```swift
+// Before (array-accepting wrapper):
+let d = prefixEditDistance(query: query, candidate: candidate, state: &state, maxEditDistance: 3)
+
+// After (Span):
+let d = prefixEditDistance(query: query.span, candidate: candidate.span, state: &state, maxEditDistance: 3)
+```
+
+For `TinyQueryFastPathTests.swift`, replace the `withUnsafeBufferPointer` closure with `.span`:
 
 ```swift
 // Before:
-let d = query.withUnsafeBufferPointer { qPtr in
-    candidate.withUnsafeBufferPointer { cPtr in
-        prefixEditDistance(query: qPtr, candidate: cPtr, ...)
-    }
+return candidateUTF8.withUnsafeBufferPointer { ptr in
+    matcher.scoreImpl(ptr, ...)
 }
 
 // After:
-let d = prefixEditDistance(query: query.span, candidate: candidate.span, ...)
+return matcher.scoreImpl(candidateUTF8.span, ...)
 ```
 
 Test files to update:
@@ -152,14 +162,38 @@ Test files to update:
 - `GreekCyrillicTests.swift`
 - `AlgorithmBoundaryTests.swift`
 
-### 7. Update documentation
+### 7. Deprecate or remove score(utf8:against:buffer:)
+
+The `score(utf8:against:buffer:)` method was added as a workaround for Swift 6.0's non-inlinable `String.withUTF8`. With Span, the String API recovers full throughput — the UTF-8 overload is no longer needed.
+
+**Source changes:**
+- `FuzzyMatcher.swift`: Mark `score(utf8:against:buffer:)` as `@available(*, deprecated, message: "Use score(_:against:buffer:) instead — Span provides equivalent throughput")`, or remove it entirely
+- Remove the `@inlinable` / `@inline(__always)` annotations that were added for the UTF-8 bypass path if they are no longer needed
+
+**Documentation — remove three-tier API references:**
+- `CLAUDE.md`: Remove the "UTF-8 API" section and the Swift 6.0 limitation note; collapse back to two tiers (High-Performance + Convenience)
+- `README.md`: Remove the "UTF-8 API (Maximum Throughput)" section and the `score(utf8:...)` row from the API reference table
+- `FuzzyMatch.docc/FuzzyMatch.md`: Remove the UTF-8 API paragraph and code example
+- `FuzzyMatch.docc/GettingStarted.md`: Remove the UTF-8 API paragraph and code example
+- `FuzzyMatch.docc/QualityAndPerformance.md`: Remove the `score(utf8:...)` row from the API table and the inlining explanation paragraph; restore the original two-column table format
+
+**Benchmarks — remove UTF-8 variants:**
+- `Benchmarks/Benchmarks/FuzzyMatchBenchmark/FuzzyMatchBenchmark.swift`: Remove the "(UTF-8)" benchmark variants (ED 5-char, ED 10-char, SW 5-char, SW 10-char)
+- `Benchmarks/Benchmarks/CorpusBenchmark/CorpusBenchmark.swift`: Remove "ED - all queries (UTF-8)" and "SW - all queries (UTF-8)" benchmarks
+- `Comparison/bench-fuzzymatch/Sources/main.swift`: Remove the `--utf8` flag, `useUTF8` config field, and the UTF-8 scoring path in `scoreQuery`
+- `Comparison/run-benchmarks.sh`: Remove `--fm-ed-utf8` and `--fm-sw-utf8` flags and their run/save sections
+
+**Tests:**
+- `Tests/FuzzyMatchTests/ConvenienceAPITests.swift`: Remove or update the `utf8API*` tests (they can be removed if the method is removed, or updated to test the deprecated path if kept)
+
+### 8. Update documentation
 
 - `CLAUDE.md`: Change `Swift 6.0+, macOS 14+` → `Swift 6.2+, macOS 26+`; remove the Spans migration note
 - `README.md`: Change `Swift 6.0+` → `Swift 6.2+`; update platform versions; add back "(requires span support)" note
 - `CONTRIBUTING.md`: Change `Swift 6.0+` → `Swift 6.2+`; update platform versions
 - `ScoringBuffer.swift`: Update doc comment on CandidateStorage from "buffer borrowing" back to "Span borrowing"
 
-### 8. Update doc comments in source files
+### 9. Update doc comments in source files
 
 - `Prefilters.swift`: Update `computeCharBitmask` doc comment to reference "Span" instead of "UnsafeBufferPointer"
 - `WordBoundary.swift`: Update example code in doc comments to use `.span` syntax

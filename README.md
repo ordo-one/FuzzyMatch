@@ -123,6 +123,26 @@ getUsername: score=0.9988, kind=prefix
 setUser: score=0.9047619047619048, kind=prefix
 ```
 
+### UTF-8 API (Maximum Throughput)
+
+For the highest possible throughput, use `score(utf8:against:buffer:)` with pre-extracted UTF-8 bytes. This `@inlinable` method enables cross-module inlining that the String overload cannot achieve on Swift 6.0 (where `String.withUTF8` is non-inlinable), delivering ~60% higher throughput:
+
+```swift
+let matcher = FuzzyMatcher()
+let query = matcher.prepare("getUser")
+var buffer = matcher.makeBuffer()
+
+for var candidate in candidates {
+    candidate.withUTF8 { utf8 in
+        if let match = matcher.score(utf8: utf8, against: query, buffer: &buffer) {
+            print("score=\(match.score)")
+        }
+    }
+}
+```
+
+> **Note:** This performance gap is a Swift 6.0 limitation. When the library adopts Swift 6.2+ Span, the String API will recover full throughput and this method may be deprecated.
+
 ### Custom Configuration
 
 ```swift
@@ -481,6 +501,10 @@ func makeBuffer() -> ScoringBuffer
 
 // High-performance scoring (zero allocations — use this for hot paths)
 func score(_ candidate: String, against query: FuzzyQuery,
+           buffer: inout ScoringBuffer) -> ScoredMatch?
+
+// UTF-8 scoring (highest throughput — enables cross-module inlining on Swift 6.0)
+func score(utf8 candidateUTF8: UnsafeBufferPointer<UInt8>, against query: FuzzyQuery,
            buffer: inout ScoringBuffer) -> ScoredMatch?
 
 // Convenience: one-shot scoring (allocates internally)
