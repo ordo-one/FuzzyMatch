@@ -1,3 +1,4 @@
+import Dispatch
 import Foundation
 import HeapModule
 
@@ -215,7 +216,7 @@ struct App {
 
     static func loadCorpus(from path: String) -> [Instrument] {
         print("Loading corpus from \(path)...", terminator: "")
-        fflush(stdout)
+        fflush(nil)
         let data = try! Data(contentsOf: URL(fileURLWithPath: path))
         let content = String(decoding: data, as: UTF8.self)
         print(" done (\(data.count) bytes)")
@@ -237,7 +238,7 @@ struct App {
     // MARK: - Timing
 
     static func now() -> UInt64 {
-        clock_gettime_nsec_np(CLOCK_UPTIME_RAW)
+        DispatchTime.now().uptimeNanoseconds
     }
 
     static func msFrom(_ start: UInt64, to end: UInt64) -> Double {

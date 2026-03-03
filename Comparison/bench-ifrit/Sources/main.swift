@@ -1,6 +1,7 @@
 // Ifrit (Fuse) benchmark harness
 // NOTE: Ifrit is very slow compared to other matchers. Use --iterations 1 (default).
 
+import Dispatch
 import Ifrit
 import Foundation
 
@@ -36,7 +37,7 @@ func loadQueries(from path: String) -> [Query] {
 // MARK: - Timing
 
 func now() -> UInt64 {
-    clock_gettime_nsec_np(CLOCK_UPTIME_RAW)
+    DispatchTime.now().uptimeNanoseconds
 }
 
 func msFrom(_ start: UInt64, to end: UInt64) -> Double {
@@ -72,7 +73,7 @@ let queries = loadQueries(from: queriesPath)
 
 // Load corpus from TSV
 print("Loading corpus from \(tsvPath)...", terminator: "")
-fflush(stdout)
+fflush(nil)
 let data = try! Data(contentsOf: URL(fileURLWithPath: tsvPath))
 let content = String(decoding: data, as: UTF8.self)
 print(" done (\(data.count) bytes)")
