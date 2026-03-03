@@ -160,6 +160,10 @@ See [Agents/ADDING_TEST_QUERIES.md](Agents/ADDING_TEST_QUERIES.md) for the full 
 - `Documentation/SMITH_WATERMAN.md` - Smith-Waterman local alignment algorithm documentation
 - `Documentation/MATCHING_MODES.md` - High-level comparison of both matching modes
 
+## Low-Level Optimization with `@_assemblyVision`
+
+See [Agents/ASSEMBLY_VISION.md](Agents/ASSEMBLY_VISION.md) for how to use Swift's `@_assemblyVision` attribute to inspect compiler optimization decisions (inlining, ARC traffic, bounds checks, specialization) in hot path functions. Use this when investigating low-level performance — annotate one function at a time, clean-build in release mode, and analyze the remarks.
+
 ## Prepare Release
 
 See [Agents/PREPARE_RELEASE.md](Agents/PREPARE_RELEASE.md) for the full release preparation workflow (benchmarks, quality runs, documentation review, fuzzygrep benchmarks). Read that file when asked to "prepare release".
