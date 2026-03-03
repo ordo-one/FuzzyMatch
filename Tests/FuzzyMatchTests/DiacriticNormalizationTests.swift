@@ -223,7 +223,7 @@ import Testing
 @Test func bitmaskUeberMatchesUber() {
     // "über" candidate should have 'u' bit set (not just multi-byte bit)
     let uberBytes = Array("über".utf8)
-    let (mask, _) = uberBytes.withUnsafeBufferPointer { computeCharBitmaskWithASCIICheck($0) }
+    let (mask, _) = computeCharBitmaskWithASCIICheck(uberBytes)
     // 'u' is bit 20 (0x75 - 0x61 = 20)
     let uBit: UInt64 = 1 << 20
     #expect(mask & uBit != 0, "über should have 'u' bit set in bitmask")
@@ -231,7 +231,7 @@ import Testing
 
 @Test func bitmaskCafeMatchesCafe() {
     let cafeBytes = Array("café".utf8)
-    let (mask, _) = cafeBytes.withUnsafeBufferPointer { computeCharBitmaskWithASCIICheck($0) }
+    let (mask, _) = computeCharBitmaskWithASCIICheck(cafeBytes)
     // 'e' is bit 4 (0x65 - 0x61 = 4)
     let eBit: UInt64 = 1 << 4
     #expect(mask & eBit != 0, "café should have 'e' bit set in bitmask")

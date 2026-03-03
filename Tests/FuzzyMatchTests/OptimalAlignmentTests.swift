@@ -22,23 +22,17 @@ private func runAlignment(
     candidate: [UInt8],
     config: EditDistanceConfig = EditDistanceConfig()
 ) -> (positionCount: Int, bonus: Double, positions: [Int]) {
-    let boundaryMask = candidate.withUnsafeBufferPointer { cPtr in
-        computeBoundaryMask(bytes: cPtr)
-    }
+    let boundaryMask = computeBoundaryMask(bytes: candidate)
     var positions = [Int](repeating: 0, count: query.count)
     var state = AlignmentState(maxQueryLength: query.count, maxCandidateLength: candidate.count)
-    let result = query.withUnsafeBufferPointer { qPtr in
-        candidate.withUnsafeBufferPointer { cPtr in
-            optimalAlignment(
-                query: qPtr,
-                candidate: cPtr,
-                boundaryMask: boundaryMask,
-                positions: &positions,
-                state: &state,
-                config: config
-            )
-        }
-    }
+    let result = optimalAlignment(
+        query: query,
+        candidate: candidate,
+        boundaryMask: boundaryMask,
+        positions: &positions,
+        state: &state,
+        config: config
+    )
     return (result.positionCount, result.bonus, positions)
 }
 
@@ -130,34 +124,26 @@ private func runAlignment(
     for testCase in cases {
         let query = Array(testCase.query.utf8)
         let candidate = Array(testCase.candidate.utf8)
-        let boundaryMask = candidate.withUnsafeBufferPointer { cPtr in
-            computeBoundaryMask(bytes: cPtr)
-        }
+        let boundaryMask = computeBoundaryMask(bytes: candidate)
 
         // Greedy
         var greedyPositions = [Int](repeating: 0, count: query.count)
-        let greedyCount = query.withUnsafeBufferPointer { qPtr in
-            candidate.withUnsafeBufferPointer { cPtr in
-                findMatchPositions(
-                    query: qPtr,
-                    candidate: cPtr,
-                    boundaryMask: boundaryMask,
-                    positions: &greedyPositions
-                )
-            }
-        }
+        let greedyCount = findMatchPositions(
+            query: query,
+            candidate: candidate,
+            boundaryMask: boundaryMask,
+            positions: &greedyPositions
+        )
 
         var greedyBonus = 0.0
         if greedyCount > 0 {
-            greedyBonus = candidate.withUnsafeBufferPointer { cPtr in
-                calculateBonuses(
-                    matchPositions: greedyPositions,
-                    positionCount: greedyCount,
-                    candidateBytes: cPtr,
-                    boundaryMask: boundaryMask,
-                    config: config
-                )
-            }
+            greedyBonus = calculateBonuses(
+                matchPositions: greedyPositions,
+                positionCount: greedyCount,
+                candidateBytes: candidate,
+                boundaryMask: boundaryMask,
+                config: config
+            )
         }
 
         // DP optimal

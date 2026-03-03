@@ -313,7 +313,7 @@ import Testing
     // Accented characters should not trigger word boundaries incorrectly
     let bytes = Array("Société".utf8)
     // The é is a 2-byte sequence 0xC3 0xA9, should not trigger boundary
-    let mask = bytes.withUnsafeBufferPointer { computeBoundaryMask(bytes: $0) }
+    let mask = computeBoundaryMask(bytes: bytes)
     // Position 0 is always a boundary
     #expect((mask & 1) != 0)
 }

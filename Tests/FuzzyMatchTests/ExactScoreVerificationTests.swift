@@ -95,15 +95,13 @@ import Testing
     let candidate = Array("abcdef".utf8)
     let boundaryMask: UInt64 = 0b1  // Only position 0
 
-    let bonus = candidate.withUnsafeBufferPointer { ptr in
-        calculateBonuses(
-            matchPositions: positions,
-            positionCount: positions.count,
-            candidateBytes: ptr,
-            boundaryMask: boundaryMask,
-            config: config
-        )
-    }
+    let bonus = calculateBonuses(
+        matchPositions: positions,
+        positionCount: positions.count,
+        candidateBytes: candidate,
+        boundaryMask: boundaryMask,
+        config: config
+    )
 
     // Expected:
     // Position 0: boundary bonus = 0.1
@@ -128,30 +126,26 @@ import Testing
     let candidate = Array("abcdefghij".utf8)
     let boundaryMask: UInt64 = 0
 
-    let bonus0 = candidate.withUnsafeBufferPointer { ptr in
-        calculateBonuses(
-            matchPositions: positions0,
-            positionCount: 1,
-            candidateBytes: ptr,
-            boundaryMask: boundaryMask,
-            config: config
-        )
-    }
+    let bonus0 = calculateBonuses(
+        matchPositions: positions0,
+        positionCount: 1,
+        candidateBytes: candidate,
+        boundaryMask: boundaryMask,
+        config: config
+    )
 
     // Position 0: decay = 1 - 0/10 = 1.0, bonus = 0.15 * 1.0 = 0.15
     #expect(abs(bonus0 - 0.15) < 0.001, "Position 0 should get full bonus 0.15, got \(bonus0)")
 
     // Match at position 5 - half bonus
     let positions5 = [5]
-    let bonus5 = candidate.withUnsafeBufferPointer { ptr in
-        calculateBonuses(
-            matchPositions: positions5,
-            positionCount: 1,
-            candidateBytes: ptr,
-            boundaryMask: boundaryMask,
-            config: config
-        )
-    }
+    let bonus5 = calculateBonuses(
+        matchPositions: positions5,
+        positionCount: 1,
+        candidateBytes: candidate,
+        boundaryMask: boundaryMask,
+        config: config
+    )
 
     // Position 5: decay = 1 - 5/10 = 0.5, bonus = 0.15 * 0.5 = 0.075
     #expect(abs(bonus5 - 0.075) < 0.001, "Position 5 should get bonus 0.075, got \(bonus5)")
@@ -393,15 +387,13 @@ import Testing
     let candidate = Array("abcde".utf8)
     let boundaryMask: UInt64 = 0b1  // Only position 0
 
-    let bonus = candidate.withUnsafeBufferPointer { ptr in
-        calculateBonuses(
-            matchPositions: positions,
-            positionCount: positions.count,
-            candidateBytes: ptr,
-            boundaryMask: boundaryMask,
-            config: config
-        )
-    }
+    let bonus = calculateBonuses(
+        matchPositions: positions,
+        positionCount: positions.count,
+        candidateBytes: candidate,
+        boundaryMask: boundaryMask,
+        config: config
+    )
 
     // Position 0: boundary = 0.1
     // Positions 1-4: consecutive = 4 * 0.05 = 0.2

@@ -21,16 +21,12 @@ import Testing
     let candidate: [UInt8] = Array("hello".utf8)
     var state = EditDistanceState(maxQueryLength: query.count)
 
-    let distance = query.withUnsafeBufferPointer { qPtr in
-        candidate.withUnsafeBufferPointer { cPtr in
-            prefixEditDistance(
-                query: qPtr,
-                candidate: cPtr,
-                state: &state,
-                maxEditDistance: 3
-            )
-        }
-    }
+    let distance = prefixEditDistance(
+        query: query,
+        candidate: candidate,
+        state: &state,
+        maxEditDistance: 3
+    )
 
     #expect(distance == 0)
 }
@@ -40,16 +36,12 @@ import Testing
     let candidate: [UInt8] = Array("hello".utf8)
     var state = EditDistanceState(maxQueryLength: query.count)
 
-    let distance = query.withUnsafeBufferPointer { qPtr in
-        candidate.withUnsafeBufferPointer { cPtr in
-            prefixEditDistance(
-                query: qPtr,
-                candidate: cPtr,
-                state: &state,
-                maxEditDistance: 3
-            )
-        }
-    }
+    let distance = prefixEditDistance(
+        query: query,
+        candidate: candidate,
+        state: &state,
+        maxEditDistance: 3
+    )
 
     #expect(distance == 1)
 }
@@ -59,16 +51,12 @@ import Testing
     let candidate: [UInt8] = Array("helo".utf8)
     var state = EditDistanceState(maxQueryLength: query.count)
 
-    let distance = query.withUnsafeBufferPointer { qPtr in
-        candidate.withUnsafeBufferPointer { cPtr in
-            prefixEditDistance(
-                query: qPtr,
-                candidate: cPtr,
-                state: &state,
-                maxEditDistance: 3
-            )
-        }
-    }
+    let distance = prefixEditDistance(
+        query: query,
+        candidate: candidate,
+        state: &state,
+        maxEditDistance: 3
+    )
 
     #expect(distance == 1)
 }
@@ -78,16 +66,12 @@ import Testing
     let candidate: [UInt8] = Array("hallo".utf8)
     var state = EditDistanceState(maxQueryLength: query.count)
 
-    let distance = query.withUnsafeBufferPointer { qPtr in
-        candidate.withUnsafeBufferPointer { cPtr in
-            prefixEditDistance(
-                query: qPtr,
-                candidate: cPtr,
-                state: &state,
-                maxEditDistance: 3
-            )
-        }
-    }
+    let distance = prefixEditDistance(
+        query: query,
+        candidate: candidate,
+        state: &state,
+        maxEditDistance: 3
+    )
 
     #expect(distance == 1)
 }
@@ -100,16 +84,12 @@ import Testing
     let candidate: [UInt8] = Array("the".utf8)
     var state = EditDistanceState(maxQueryLength: query.count)
 
-    let distance = query.withUnsafeBufferPointer { qPtr in
-        candidate.withUnsafeBufferPointer { cPtr in
-            prefixEditDistance(
-                query: qPtr,
-                candidate: cPtr,
-                state: &state,
-                maxEditDistance: 3
-            )
-        }
-    }
+    let distance = prefixEditDistance(
+        query: query,
+        candidate: candidate,
+        state: &state,
+        maxEditDistance: 3
+    )
 
     #expect(distance == 1)
 }
@@ -120,16 +100,12 @@ import Testing
     let candidate: [UInt8] = Array("abcd".utf8)
     var state = EditDistanceState(maxQueryLength: query.count)
 
-    let distance = query.withUnsafeBufferPointer { qPtr in
-        candidate.withUnsafeBufferPointer { cPtr in
-            prefixEditDistance(
-                query: qPtr,
-                candidate: cPtr,
-                state: &state,
-                maxEditDistance: 3
-            )
-        }
-    }
+    let distance = prefixEditDistance(
+        query: query,
+        candidate: candidate,
+        state: &state,
+        maxEditDistance: 3
+    )
 
     #expect(distance == 1)
 }
@@ -140,16 +116,12 @@ import Testing
     let candidate: [UInt8] = Array("ab".utf8)
     var state = EditDistanceState(maxQueryLength: query.count)
 
-    let distance = query.withUnsafeBufferPointer { qPtr in
-        candidate.withUnsafeBufferPointer { cPtr in
-            prefixEditDistance(
-                query: qPtr,
-                candidate: cPtr,
-                state: &state,
-                maxEditDistance: 3
-            )
-        }
-    }
+    let distance = prefixEditDistance(
+        query: query,
+        candidate: candidate,
+        state: &state,
+        maxEditDistance: 3
+    )
 
     #expect(distance == 1)
 }
@@ -162,16 +134,12 @@ import Testing
     let candidate: [UInt8] = Array("testing".utf8)
     var state = EditDistanceState(maxQueryLength: query.count)
 
-    let distance = query.withUnsafeBufferPointer { qPtr in
-        candidate.withUnsafeBufferPointer { cPtr in
-            prefixEditDistance(
-                query: qPtr,
-                candidate: cPtr,
-                state: &state,
-                maxEditDistance: 3
-            )
-        }
-    }
+    let distance = prefixEditDistance(
+        query: query,
+        candidate: candidate,
+        state: &state,
+        maxEditDistance: 3
+    )
 
     #expect(distance == 0)
 }
@@ -182,16 +150,12 @@ import Testing
     let candidate: [UInt8] = Array("testing".utf8)
     var state = EditDistanceState(maxQueryLength: query.count)
 
-    let distance = query.withUnsafeBufferPointer { qPtr in
-        candidate.withUnsafeBufferPointer { cPtr in
-            prefixEditDistance(
-                query: qPtr,
-                candidate: cPtr,
-                state: &state,
-                maxEditDistance: 3
-            )
-        }
-    }
+    let distance = prefixEditDistance(
+        query: query,
+        candidate: candidate,
+        state: &state,
+        maxEditDistance: 3
+    )
 
     #expect(distance == 1)
 }
@@ -201,16 +165,12 @@ import Testing
     let candidate: [UInt8] = Array("hello".utf8)
     var state = EditDistanceState(maxQueryLength: query.count)
 
-    let distance = query.withUnsafeBufferPointer { qPtr in
-        candidate.withUnsafeBufferPointer { cPtr in
-            prefixEditDistance(
-                query: qPtr,
-                candidate: cPtr,
-                state: &state,
-                maxEditDistance: 3
-            )
-        }
-    }
+    let distance = prefixEditDistance(
+        query: query,
+        candidate: candidate,
+        state: &state,
+        maxEditDistance: 3
+    )
 
     #expect(distance == 0)
 }
@@ -222,16 +182,12 @@ import Testing
     let candidate: [UInt8] = Array("unittest".utf8)
     var state = EditDistanceState(maxQueryLength: query.count)
 
-    let distance = query.withUnsafeBufferPointer { qPtr in
-        candidate.withUnsafeBufferPointer { cPtr in
-            substringEditDistance(
-                query: qPtr,
-                candidate: cPtr,
-                state: &state,
-                maxEditDistance: 3
-            )
-        }
-    }
+    let distance = substringEditDistance(
+        query: query,
+        candidate: candidate,
+        state: &state,
+        maxEditDistance: 3
+    )
 
     #expect(distance == 0)
 }
@@ -242,16 +198,12 @@ import Testing
     let candidate: [UInt8] = Array("mytesting".utf8)
     var state = EditDistanceState(maxQueryLength: query.count)
 
-    let distance = query.withUnsafeBufferPointer { qPtr in
-        candidate.withUnsafeBufferPointer { cPtr in
-            substringEditDistance(
-                query: qPtr,
-                candidate: cPtr,
-                state: &state,
-                maxEditDistance: 3
-            )
-        }
-    }
+    let distance = substringEditDistance(
+        query: query,
+        candidate: candidate,
+        state: &state,
+        maxEditDistance: 3
+    )
 
     #expect(distance == 1)
 }
@@ -261,16 +213,12 @@ import Testing
     let candidate: [UInt8] = Array("helloworldtest".utf8)
     var state = EditDistanceState(maxQueryLength: query.count)
 
-    let distance = query.withUnsafeBufferPointer { qPtr in
-        candidate.withUnsafeBufferPointer { cPtr in
-            substringEditDistance(
-                query: qPtr,
-                candidate: cPtr,
-                state: &state,
-                maxEditDistance: 3
-            )
-        }
-    }
+    let distance = substringEditDistance(
+        query: query,
+        candidate: candidate,
+        state: &state,
+        maxEditDistance: 3
+    )
 
     #expect(distance == 0)
 }
@@ -282,16 +230,12 @@ import Testing
     let candidate: [UInt8] = Array("xxxxxx".utf8)
     var state = EditDistanceState(maxQueryLength: query.count)
 
-    let distance = query.withUnsafeBufferPointer { qPtr in
-        candidate.withUnsafeBufferPointer { cPtr in
-            prefixEditDistance(
-                query: qPtr,
-                candidate: cPtr,
-                state: &state,
-                maxEditDistance: 2
-            )
-        }
-    }
+    let distance = prefixEditDistance(
+        query: query,
+        candidate: candidate,
+        state: &state,
+        maxEditDistance: 2
+    )
 
     #expect(distance == nil)
 }
@@ -302,16 +246,12 @@ import Testing
     let candidate: [UInt8] = Array("bb".utf8)
     var state = EditDistanceState(maxQueryLength: query.count)
 
-    let distance = query.withUnsafeBufferPointer { qPtr in
-        candidate.withUnsafeBufferPointer { cPtr in
-            prefixEditDistance(
-                query: qPtr,
-                candidate: cPtr,
-                state: &state,
-                maxEditDistance: 2
-            )
-        }
-    }
+    let distance = prefixEditDistance(
+        query: query,
+        candidate: candidate,
+        state: &state,
+        maxEditDistance: 2
+    )
 
     #expect(distance == 2)
 }
@@ -322,16 +262,12 @@ import Testing
     let candidate: [UInt8] = Array("bbb".utf8)
     var state = EditDistanceState(maxQueryLength: query.count)
 
-    let distance = query.withUnsafeBufferPointer { qPtr in
-        candidate.withUnsafeBufferPointer { cPtr in
-            prefixEditDistance(
-                query: qPtr,
-                candidate: cPtr,
-                state: &state,
-                maxEditDistance: 2
-            )
-        }
-    }
+    let distance = prefixEditDistance(
+        query: query,
+        candidate: candidate,
+        state: &state,
+        maxEditDistance: 2
+    )
 
     #expect(distance == nil)
 }
@@ -394,16 +330,12 @@ import Testing
     let candidate: [UInt8] = Array("hello".utf8)
     var state = EditDistanceState(maxQueryLength: query.count)
 
-    let distance = query.withUnsafeBufferPointer { qPtr in
-        candidate.withUnsafeBufferPointer { cPtr in
-            prefixEditDistance(
-                query: qPtr,
-                candidate: cPtr,
-                state: &state,
-                maxEditDistance: 3
-            )
-        }
-    }
+    let distance = prefixEditDistance(
+        query: query,
+        candidate: candidate,
+        state: &state,
+        maxEditDistance: 3
+    )
 
     #expect(distance == 2)
 }
@@ -414,16 +346,12 @@ import Testing
     let candidate: [UInt8] = Array("hlo".utf8)
     var state = EditDistanceState(maxQueryLength: query.count)
 
-    let distance = query.withUnsafeBufferPointer { qPtr in
-        candidate.withUnsafeBufferPointer { cPtr in
-            prefixEditDistance(
-                query: qPtr,
-                candidate: cPtr,
-                state: &state,
-                maxEditDistance: 3
-            )
-        }
-    }
+    let distance = prefixEditDistance(
+        query: query,
+        candidate: candidate,
+        state: &state,
+        maxEditDistance: 3
+    )
 
     #expect(distance == 2)
 }
@@ -438,16 +366,12 @@ import Testing
     let candidate: [UInt8] = Array("sitting".utf8)
     var state = EditDistanceState(maxQueryLength: query.count)
 
-    let distance = query.withUnsafeBufferPointer { qPtr in
-        candidate.withUnsafeBufferPointer { cPtr in
-            prefixEditDistance(
-                query: qPtr,
-                candidate: cPtr,
-                state: &state,
-                maxEditDistance: 5
-            )
-        }
-    }
+    let distance = prefixEditDistance(
+        query: query,
+        candidate: candidate,
+        state: &state,
+        maxEditDistance: 5
+    )
 
     // The actual edit distance depends on the prefix matching algorithm
     #expect(distance != nil)
@@ -465,16 +389,8 @@ import Testing
     var stateA = EditDistanceState(maxQueryLength: a.count)
     var stateB = EditDistanceState(maxQueryLength: b.count)
 
-    let dAB = a.withUnsafeBufferPointer { aPtr in
-        b.withUnsafeBufferPointer { bPtr in
-            prefixEditDistance(query: aPtr, candidate: bPtr, state: &stateA, maxEditDistance: 5)
-        }
-    }
-    let dBA = b.withUnsafeBufferPointer { bPtr in
-        a.withUnsafeBufferPointer { aPtr in
-            prefixEditDistance(query: bPtr, candidate: aPtr, state: &stateB, maxEditDistance: 5)
-        }
-    }
+    let dAB = prefixEditDistance(query: a, candidate: b, state: &stateA, maxEditDistance: 5)
+    let dBA = prefixEditDistance(query: b, candidate: a, state: &stateB, maxEditDistance: 5)
 
     #expect(dAB == 0)
     #expect(dBA == 0)
@@ -486,16 +402,8 @@ import Testing
     var stateA = EditDistanceState(maxQueryLength: a.count)
     var stateB = EditDistanceState(maxQueryLength: b.count)
 
-    let dAB = a.withUnsafeBufferPointer { aPtr in
-        b.withUnsafeBufferPointer { bPtr in
-            prefixEditDistance(query: aPtr, candidate: bPtr, state: &stateA, maxEditDistance: 5)
-        }
-    }
-    let dBA = b.withUnsafeBufferPointer { bPtr in
-        a.withUnsafeBufferPointer { aPtr in
-            prefixEditDistance(query: bPtr, candidate: aPtr, state: &stateB, maxEditDistance: 5)
-        }
-    }
+    let dAB = prefixEditDistance(query: a, candidate: b, state: &stateA, maxEditDistance: 5)
+    let dBA = prefixEditDistance(query: b, candidate: a, state: &stateB, maxEditDistance: 5)
 
     #expect(dAB == dBA)
     #expect(dAB == 1)
@@ -507,16 +415,8 @@ import Testing
     var stateA = EditDistanceState(maxQueryLength: a.count)
     var stateB = EditDistanceState(maxQueryLength: b.count)
 
-    let dAB = a.withUnsafeBufferPointer { aPtr in
-        b.withUnsafeBufferPointer { bPtr in
-            prefixEditDistance(query: aPtr, candidate: bPtr, state: &stateA, maxEditDistance: 5)
-        }
-    }
-    let dBA = b.withUnsafeBufferPointer { bPtr in
-        a.withUnsafeBufferPointer { aPtr in
-            prefixEditDistance(query: bPtr, candidate: aPtr, state: &stateB, maxEditDistance: 5)
-        }
-    }
+    let dAB = prefixEditDistance(query: a, candidate: b, state: &stateA, maxEditDistance: 5)
+    let dBA = prefixEditDistance(query: b, candidate: a, state: &stateB, maxEditDistance: 5)
 
     #expect(dAB == dBA)
     #expect(dAB == 1)
@@ -531,16 +431,8 @@ import Testing
     var stateA = EditDistanceState(maxQueryLength: a.count)
     var stateB = EditDistanceState(maxQueryLength: b.count)
 
-    let dAB = a.withUnsafeBufferPointer { aPtr in
-        b.withUnsafeBufferPointer { bPtr in
-            prefixEditDistance(query: aPtr, candidate: bPtr, state: &stateA, maxEditDistance: 5)
-        }
-    }
-    let dBA = b.withUnsafeBufferPointer { bPtr in
-        a.withUnsafeBufferPointer { aPtr in
-            prefixEditDistance(query: bPtr, candidate: aPtr, state: &stateB, maxEditDistance: 5)
-        }
-    }
+    let dAB = prefixEditDistance(query: a, candidate: b, state: &stateA, maxEditDistance: 5)
+    let dBA = prefixEditDistance(query: b, candidate: a, state: &stateB, maxEditDistance: 5)
 
     #expect(dAB == dBA)
     #expect(dAB == 1)
@@ -552,16 +444,8 @@ import Testing
     var stateA = EditDistanceState(maxQueryLength: a.count)
     var stateB = EditDistanceState(maxQueryLength: b.count)
 
-    let dAB = a.withUnsafeBufferPointer { aPtr in
-        b.withUnsafeBufferPointer { bPtr in
-            prefixEditDistance(query: aPtr, candidate: bPtr, state: &stateA, maxEditDistance: 5)
-        }
-    }
-    let dBA = b.withUnsafeBufferPointer { bPtr in
-        a.withUnsafeBufferPointer { aPtr in
-            prefixEditDistance(query: bPtr, candidate: aPtr, state: &stateB, maxEditDistance: 5)
-        }
-    }
+    let dAB = prefixEditDistance(query: a, candidate: b, state: &stateA, maxEditDistance: 5)
+    let dBA = prefixEditDistance(query: b, candidate: a, state: &stateB, maxEditDistance: 5)
 
     // Same-length strings: prefix edit distance is the full Damerau-Levenshtein distance
     #expect(dAB == dBA)
@@ -573,16 +457,8 @@ import Testing
     var stateA = EditDistanceState(maxQueryLength: a.count)
     var stateB = EditDistanceState(maxQueryLength: b.count)
 
-    let dAB = a.withUnsafeBufferPointer { aPtr in
-        b.withUnsafeBufferPointer { bPtr in
-            prefixEditDistance(query: aPtr, candidate: bPtr, state: &stateA, maxEditDistance: 5)
-        }
-    }
-    let dBA = b.withUnsafeBufferPointer { bPtr in
-        a.withUnsafeBufferPointer { aPtr in
-            prefixEditDistance(query: bPtr, candidate: aPtr, state: &stateB, maxEditDistance: 5)
-        }
-    }
+    let dAB = prefixEditDistance(query: a, candidate: b, state: &stateA, maxEditDistance: 5)
+    let dBA = prefixEditDistance(query: b, candidate: a, state: &stateB, maxEditDistance: 5)
 
     #expect(dAB == dBA)
     #expect(dAB == 3)
@@ -594,17 +470,9 @@ import Testing
     var stateA = EditDistanceState(maxQueryLength: empty.count)
     var stateB = EditDistanceState(maxQueryLength: nonempty.count)
 
-    let dAB = empty.withUnsafeBufferPointer { ePtr in
-        nonempty.withUnsafeBufferPointer { nPtr in
-            prefixEditDistance(query: ePtr, candidate: nPtr, state: &stateA, maxEditDistance: 5)
-        }
-    }
+    let dAB = prefixEditDistance(query: empty, candidate: nonempty, state: &stateA, maxEditDistance: 5)
     // Reverse: "abc" against "" — prefix distance is 3 (delete all)
-    let dBA = nonempty.withUnsafeBufferPointer { nPtr in
-        empty.withUnsafeBufferPointer { ePtr in
-            prefixEditDistance(query: nPtr, candidate: ePtr, state: &stateB, maxEditDistance: 5)
-        }
-    }
+    let dBA = prefixEditDistance(query: nonempty, candidate: empty, state: &stateB, maxEditDistance: 5)
 
     // Empty query matches any prefix with 0 edits; nonempty query against empty candidate = queryLength
     #expect(dAB == 0)
@@ -620,16 +488,8 @@ import Testing
     var stateA = EditDistanceState(maxQueryLength: a.count)
     var stateB = EditDistanceState(maxQueryLength: b.count)
 
-    let dAB = a.withUnsafeBufferPointer { aPtr in
-        b.withUnsafeBufferPointer { bPtr in
-            prefixEditDistance(query: aPtr, candidate: bPtr, state: &stateA, maxEditDistance: 5)
-        }
-    }
-    let dBA = b.withUnsafeBufferPointer { bPtr in
-        a.withUnsafeBufferPointer { aPtr in
-            prefixEditDistance(query: bPtr, candidate: aPtr, state: &stateB, maxEditDistance: 5)
-        }
-    }
+    let dAB = prefixEditDistance(query: a, candidate: b, state: &stateA, maxEditDistance: 5)
+    let dBA = prefixEditDistance(query: b, candidate: a, state: &stateB, maxEditDistance: 5)
 
     #expect(dAB == dBA)
     #expect(dAB == 1)
@@ -646,11 +506,7 @@ import Testing
     let b: [UInt8] = Array("abcdxy".utf8)
     var state = EditDistanceState(maxQueryLength: a.count)
 
-    let distance = a.withUnsafeBufferPointer { aPtr in
-        b.withUnsafeBufferPointer { bPtr in
-            prefixEditDistance(query: aPtr, candidate: bPtr, state: &state, maxEditDistance: 5)
-        }
-    }
+    let distance = prefixEditDistance(query: a, candidate: b, state: &state, maxEditDistance: 5)
 
     #expect(distance == 2) // 2 substitutions: e→x, f→y
 }
@@ -661,11 +517,7 @@ import Testing
     let b: [UInt8] = Array("abdefg".utf8)
     var state = EditDistanceState(maxQueryLength: a.count)
 
-    let distance = a.withUnsafeBufferPointer { aPtr in
-        b.withUnsafeBufferPointer { bPtr in
-            prefixEditDistance(query: aPtr, candidate: bPtr, state: &state, maxEditDistance: 5)
-        }
-    }
+    let distance = prefixEditDistance(query: a, candidate: b, state: &state, maxEditDistance: 5)
 
     #expect(distance == 2) // 2 substitutions: x→a, y→b
 }
@@ -676,11 +528,7 @@ import Testing
     let b: [UInt8] = Array("abcydef".utf8)
     var state = EditDistanceState(maxQueryLength: a.count)
 
-    let distance = a.withUnsafeBufferPointer { aPtr in
-        b.withUnsafeBufferPointer { bPtr in
-            prefixEditDistance(query: aPtr, candidate: bPtr, state: &state, maxEditDistance: 5)
-        }
-    }
+    let distance = prefixEditDistance(query: a, candidate: b, state: &state, maxEditDistance: 5)
 
     #expect(distance == 1) // 1 substitution in the middle
 }
@@ -691,11 +539,7 @@ import Testing
     let candidate: [UInt8] = Array("abcdef".utf8)
     var state = EditDistanceState(maxQueryLength: query.count)
 
-    let distance = query.withUnsafeBufferPointer { qPtr in
-        candidate.withUnsafeBufferPointer { cPtr in
-            prefixEditDistance(query: qPtr, candidate: cPtr, state: &state, maxEditDistance: 5)
-        }
-    }
+    let distance = prefixEditDistance(query: query, candidate: candidate, state: &state, maxEditDistance: 5)
 
     #expect(distance == 0) // exact prefix match
 }
@@ -706,11 +550,7 @@ import Testing
     let b: [UInt8] = Array("abcstdef".utf8)
     var state = EditDistanceState(maxQueryLength: a.count)
 
-    let distance = a.withUnsafeBufferPointer { aPtr in
-        b.withUnsafeBufferPointer { bPtr in
-            prefixEditDistance(query: aPtr, candidate: bPtr, state: &state, maxEditDistance: 5)
-        }
-    }
+    let distance = prefixEditDistance(query: a, candidate: b, state: &state, maxEditDistance: 5)
 
     #expect(distance == 1) // transposition of "ts" → "st"
 }
@@ -722,11 +562,7 @@ import Testing
     let b: [UInt8] = Array((prefix + "y").utf8)
     var state = EditDistanceState(maxQueryLength: a.count)
 
-    let distance = a.withUnsafeBufferPointer { aPtr in
-        b.withUnsafeBufferPointer { bPtr in
-            prefixEditDistance(query: aPtr, candidate: bPtr, state: &state, maxEditDistance: 5)
-        }
-    }
+    let distance = prefixEditDistance(query: a, candidate: b, state: &state, maxEditDistance: 5)
 
     #expect(distance == 1)
 }
@@ -740,16 +576,12 @@ import Testing
     let candidate: [UInt8] = Array("wisdom".utf8)
     var state = EditDistanceState(maxQueryLength: query.count)
 
-    let distance = query.withUnsafeBufferPointer { qPtr in
-        candidate.withUnsafeBufferPointer { cPtr in
-            prefixEditDistance(
-                query: qPtr,
-                candidate: cPtr,
-                state: &state,
-                maxEditDistance: 1
-            )
-        }
-    }
+    let distance = prefixEditDistance(
+        query: query,
+        candidate: candidate,
+        state: &state,
+        maxEditDistance: 1
+    )
 
     #expect(distance == 0)  // "w" is an exact prefix of "wisdom"
 }
@@ -759,16 +591,12 @@ import Testing
     let candidate: [UInt8] = Array("wisdom".utf8)
     var state = EditDistanceState(maxQueryLength: query.count)
 
-    let distance = query.withUnsafeBufferPointer { qPtr in
-        candidate.withUnsafeBufferPointer { cPtr in
-            prefixEditDistance(
-                query: qPtr,
-                candidate: cPtr,
-                state: &state,
-                maxEditDistance: 1
-            )
-        }
-    }
+    let distance = prefixEditDistance(
+        query: query,
+        candidate: candidate,
+        state: &state,
+        maxEditDistance: 1
+    )
 
     #expect(distance == 1)  // substitution: z -> w
 }

@@ -120,12 +120,10 @@ import Testing
     let queryTrigrams = computeTrigrams(queryBytes)
 
     let candidateBytes: [UInt8] = Array("hello".utf8)
-    let count = candidateBytes.withUnsafeBufferPointer { cPtr in
-        countSharedTrigrams(
-            candidateBytes: cPtr,
-            queryTrigrams: queryTrigrams
-        )
-    }
+    let count = countSharedTrigrams(
+        candidateBytes: candidateBytes,
+        queryTrigrams: queryTrigrams
+    )
 
     #expect(count == 3) // "hel", "ell", "llo"
 }
@@ -135,12 +133,10 @@ import Testing
     let queryTrigrams = computeTrigrams(queryBytes)
 
     let candidateBytes: [UInt8] = Array("help".utf8)
-    let count = candidateBytes.withUnsafeBufferPointer { cPtr in
-        countSharedTrigrams(
-            candidateBytes: cPtr,
-            queryTrigrams: queryTrigrams
-        )
-    }
+    let count = countSharedTrigrams(
+        candidateBytes: candidateBytes,
+        queryTrigrams: queryTrigrams
+    )
 
     // "hel" is shared, "elp" is not in query trigrams
     #expect(count == 1)
@@ -151,12 +147,10 @@ import Testing
     let queryTrigrams = computeTrigrams(queryBytes)
 
     let candidateBytes: [UInt8] = Array("xyz".utf8)
-    let count = candidateBytes.withUnsafeBufferPointer { cPtr in
-        countSharedTrigrams(
-            candidateBytes: cPtr,
-            queryTrigrams: queryTrigrams
-        )
-    }
+    let count = countSharedTrigrams(
+        candidateBytes: candidateBytes,
+        queryTrigrams: queryTrigrams
+    )
 
     #expect(count == 0)
 }
@@ -166,12 +160,10 @@ import Testing
     let queryTrigrams = computeTrigrams(queryBytes)
 
     let candidateBytes: [UInt8] = Array("he".utf8)
-    let count = candidateBytes.withUnsafeBufferPointer { cPtr in
-        countSharedTrigrams(
-            candidateBytes: cPtr,
-            queryTrigrams: queryTrigrams
-        )
-    }
+    let count = countSharedTrigrams(
+        candidateBytes: candidateBytes,
+        queryTrigrams: queryTrigrams
+    )
 
     #expect(count == 0)
 }
@@ -180,12 +172,10 @@ import Testing
     let queryTrigrams = Set<UInt32>()
 
     let candidateBytes: [UInt8] = Array("hello".utf8)
-    let count = candidateBytes.withUnsafeBufferPointer { cPtr in
-        countSharedTrigrams(
-            candidateBytes: cPtr,
-            queryTrigrams: queryTrigrams
-        )
-    }
+    let count = countSharedTrigrams(
+        candidateBytes: candidateBytes,
+        queryTrigrams: queryTrigrams
+    )
 
     #expect(count == 0)
 }
@@ -195,12 +185,10 @@ import Testing
     let queryTrigrams = computeTrigrams(queryBytes)
 
     let candidateBytes: [UInt8] = Array("unittest".utf8)
-    let count = candidateBytes.withUnsafeBufferPointer { cPtr in
-        countSharedTrigrams(
-            candidateBytes: cPtr,
-            queryTrigrams: queryTrigrams
-        )
-    }
+    let count = countSharedTrigrams(
+        candidateBytes: candidateBytes,
+        queryTrigrams: queryTrigrams
+    )
 
     // "tes", "est" should be found in "unittest"
     #expect(count >= 2)
@@ -213,13 +201,11 @@ import Testing
     let queryTrigrams = computeTrigrams(queryBytes)
 
     let candidateBytes: [UInt8] = Array("hello".utf8)
-    let passes = candidateBytes.withUnsafeBufferPointer { cPtr in
-        passesTrigramFilter(
-            candidateBytes: cPtr,
-            queryTrigrams: queryTrigrams,
-            maxEditDistance: 2
-        )
-    }
+    let passes = passesTrigramFilter(
+        candidateBytes: candidateBytes,
+        queryTrigrams: queryTrigrams,
+        maxEditDistance: 2
+    )
 
     #expect(passes)
 }
@@ -229,13 +215,11 @@ import Testing
     let queryTrigrams = computeTrigrams(queryBytes)
 
     let candidateBytes: [UInt8] = Array("hallo".utf8)
-    let passes = candidateBytes.withUnsafeBufferPointer { cPtr in
-        passesTrigramFilter(
-            candidateBytes: cPtr,
-            queryTrigrams: queryTrigrams,
-            maxEditDistance: 2
-        )
-    }
+    let passes = passesTrigramFilter(
+        candidateBytes: candidateBytes,
+        queryTrigrams: queryTrigrams,
+        maxEditDistance: 2
+    )
 
     // "hel" -> "hal" (1 different), "ell" -> "all" (different), "llo" shared
     // At least 1 shared trigram, and within edit distance allowance
@@ -250,13 +234,11 @@ import Testing
     let queryTrigrams = computeTrigrams(queryBytes)
 
     let candidateBytes: [UInt8] = Array("xyz".utf8)
-    let passes = candidateBytes.withUnsafeBufferPointer { cPtr in
-        passesTrigramFilter(
-            candidateBytes: cPtr,
-            queryTrigrams: queryTrigrams,
-            maxEditDistance: 2
-        )
-    }
+    let passes = passesTrigramFilter(
+        candidateBytes: candidateBytes,
+        queryTrigrams: queryTrigrams,
+        maxEditDistance: 2
+    )
 
     // queryTrigrams.count = 11, threshold = 11 - 6 = 5, xyz has 1 trigram, 0 shared → rejects
     #expect(!passes)
@@ -287,13 +269,11 @@ import Testing
     let queryTrigrams = Set<UInt32>()
 
     let candidateBytes: [UInt8] = Array("anything".utf8)
-    let passes = candidateBytes.withUnsafeBufferPointer { cPtr in
-        passesTrigramFilter(
-            candidateBytes: cPtr,
-            queryTrigrams: queryTrigrams,
-            maxEditDistance: 2
-        )
-    }
+    let passes = passesTrigramFilter(
+        candidateBytes: candidateBytes,
+        queryTrigrams: queryTrigrams,
+        maxEditDistance: 2
+    )
 
     // Empty query trigrams should always pass
     #expect(passes)
@@ -304,13 +284,11 @@ import Testing
     let queryTrigrams = computeTrigrams(queryBytes)
 
     let candidateBytes: [UInt8] = Array("world".utf8)
-    let passes = candidateBytes.withUnsafeBufferPointer { cPtr in
-        passesTrigramFilter(
-            candidateBytes: cPtr,
-            queryTrigrams: queryTrigrams,
-            maxEditDistance: 5
-        )
-    }
+    let passes = passesTrigramFilter(
+        candidateBytes: candidateBytes,
+        queryTrigrams: queryTrigrams,
+        maxEditDistance: 5
+    )
 
     // With high edit distance, more dissimilar strings may pass
     // "hello" has 3 trigrams, candidate needs at least -2 (3-5=negative, so any count passes)
@@ -324,13 +302,11 @@ import Testing
 
     // Candidate that shares exactly 1 trigram
     let candidateBytes: [UInt8] = Array("llox".utf8) // "llo" is shared
-    let passes = candidateBytes.withUnsafeBufferPointer { cPtr in
-        passesTrigramFilter(
-            candidateBytes: cPtr,
-            queryTrigrams: queryTrigrams,
-            maxEditDistance: 2
-        )
-    }
+    let passes = passesTrigramFilter(
+        candidateBytes: candidateBytes,
+        queryTrigrams: queryTrigrams,
+        maxEditDistance: 2
+    )
 
     #expect(passes)
 }
