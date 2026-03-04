@@ -71,11 +71,21 @@ internal struct CandidateStorage: Sendable {
     mutating func withMutableBuffers<R>(
         _ body: (UnsafeMutablePointer<UInt8>, UnsafeMutablePointer<Int32>) -> R
     ) -> R {
-        bytes.withUnsafeMutableBufferPointer { bytesPtr in
-            bonus.withUnsafeMutableBufferPointer { bonusPtr in
+        // Swap arrays into locals so the nested withUnsafeMutableBufferPointer
+        // calls operate on independent variables, avoiding overlapping exclusive
+        // accesses to `self` in library evolution mode. swap() is O(1) for arrays.
+        var localBytes: [UInt8] = []
+        var localBonus: [Int32] = []
+        swap(&localBytes, &bytes)
+        swap(&localBonus, &bonus)
+        let result = localBytes.withUnsafeMutableBufferPointer { bytesPtr in
+            localBonus.withUnsafeMutableBufferPointer { bonusPtr in
                 body(bytesPtr.baseAddress!, bonusPtr.baseAddress!)
             }
         }
+        swap(&localBytes, &bytes)
+        swap(&localBonus, &bonus)
+        return result
     }
 }
 
@@ -391,5 +401,43 @@ public struct ScoringBuffer: Sendable {
         highWaterCandidateLength = 0
         highWaterQueryLength = 0
         callsSinceLastCheck = 0
+    }
+
+    // MARK: - Disjoint Property Access
+
+    /// Provides simultaneous `inout` access to buffers needed by the edit distance pipeline.
+    ///
+    /// In library evolution mode, passing `&buffer.candidateStorage` and `&buffer.editDistanceState`
+    /// as separate `inout` arguments triggers an overlapping-access error. This method provides
+    /// a single exclusive access to `self` and projects its stored properties through a closure.
+    @inline(__always)
+    @inlinable
+    mutating func withEditDistanceBuffers<R>(
+        _ body: (
+            inout CandidateStorage,
+            inout EditDistanceState,
+            inout [Int],
+            inout AlignmentState,
+            inout [UInt8]
+        ) -> R
+    ) -> R {
+        body(&candidateStorage, &editDistanceState, &matchPositions, &alignmentState, &wordInitials)
+    }
+
+    /// Provides simultaneous `inout` access to buffers needed by the Smith-Waterman pipeline.
+    ///
+    /// In library evolution mode, passing `&buffer.candidateStorage` and `&buffer.smithWatermanState`
+    /// as separate `inout` arguments triggers an overlapping-access error. This method provides
+    /// a single exclusive access to `self` and projects its stored properties through a closure.
+    @inline(__always)
+    @inlinable
+    mutating func withSmithWatermanBuffers<R>(
+        _ body: (
+            inout CandidateStorage,
+            inout SmithWatermanState,
+            inout [UInt8]
+        ) -> R
+    ) -> R {
+        body(&candidateStorage, &smithWatermanState, &wordInitials)
     }
 }

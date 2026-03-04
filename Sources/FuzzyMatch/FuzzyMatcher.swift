@@ -344,14 +344,16 @@ public struct FuzzyMatcher: Sendable {
     ) -> ScoredMatch? {
         switch query.config.algorithm {
         case .smithWaterman(let swConfig):
-            return scoreSmithWatermanImpl(
-                candidateUTF8,
-                against: query,
-                swConfig: swConfig,
-                candidateStorage: &buffer.candidateStorage,
-                smithWatermanState: &buffer.smithWatermanState,
-                wordInitials: &buffer.wordInitials
-            )
+            return buffer.withSmithWatermanBuffers { candidateStorage, smithWatermanState, wordInitials in
+                scoreSmithWatermanImpl(
+                    candidateUTF8,
+                    against: query,
+                    swConfig: swConfig,
+                    candidateStorage: &candidateStorage,
+                    smithWatermanState: &smithWatermanState,
+                    wordInitials: &wordInitials
+                )
+            }
 
         case .editDistance(let edConfig):
             // Fast path for 1-character queries: single scan, no buffer needed.
@@ -366,16 +368,18 @@ public struct FuzzyMatcher: Sendable {
                     minScore: query.config.minScore
                 )
             }
-            return scoreImpl(
-                candidateUTF8,
-                against: query,
-                edConfig: edConfig,
-                candidateStorage: &buffer.candidateStorage,
-                editDistanceState: &buffer.editDistanceState,
-                matchPositions: &buffer.matchPositions,
-                alignmentState: &buffer.alignmentState,
-                wordInitials: &buffer.wordInitials
-            )
+            return buffer.withEditDistanceBuffers { candidateStorage, editDistanceState, matchPositions, alignmentState, wordInitials in
+                scoreImpl(
+                    candidateUTF8,
+                    against: query,
+                    edConfig: edConfig,
+                    candidateStorage: &candidateStorage,
+                    editDistanceState: &editDistanceState,
+                    matchPositions: &matchPositions,
+                    alignmentState: &alignmentState,
+                    wordInitials: &wordInitials
+                )
+            }
         }
     }
 
