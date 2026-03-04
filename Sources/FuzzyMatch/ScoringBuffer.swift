@@ -421,7 +421,15 @@ public struct ScoringBuffer: Sendable {
             inout [UInt8]
         ) -> R
     ) -> R {
-        body(&candidateStorage, &editDistanceState, &matchPositions, &alignmentState, &wordInitials)
+        withUnsafeMutablePointer(to: &self) { ptr in
+            body(
+                &ptr.pointee.candidateStorage,
+                &ptr.pointee.editDistanceState,
+                &ptr.pointee.matchPositions,
+                &ptr.pointee.alignmentState,
+                &ptr.pointee.wordInitials
+            )
+        }
     }
 
     /// Provides simultaneous `inout` access to buffers needed by the Smith-Waterman pipeline.
@@ -438,6 +446,12 @@ public struct ScoringBuffer: Sendable {
             inout [UInt8]
         ) -> R
     ) -> R {
-        body(&candidateStorage, &smithWatermanState, &wordInitials)
+        withUnsafeMutablePointer(to: &self) { ptr in
+            body(
+                &ptr.pointee.candidateStorage,
+                &ptr.pointee.smithWatermanState,
+                &ptr.pointee.wordInitials
+            )
+        }
     }
 }
