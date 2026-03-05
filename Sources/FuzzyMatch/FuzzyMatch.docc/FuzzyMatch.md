@@ -91,4 +91,5 @@ for var candidate in candidates {
 
 - ``ScoredMatch``
 - ``MatchResult``
+- ``ItemMatchResult``
 - ``MatchKind``
