@@ -14,7 +14,7 @@ For detailed algorithm internals, see [DAMERAU_LEVENSHTEIN.md](DAMERAU_LEVENSHTE
 | **Typo handling** | Native transposition support | No transposition operation |
 | **Prefix awareness** | Explicit prefix scoring phase | No prefix concept (treats all substrings equally) |
 | **Multi-word queries** | Treated monolithically | Atom splitting with AND semantics |
-| **Throughput** | ~32M candidates/sec | ~66M candidates/sec |
+| **Throughput** | ~33M candidates/sec | ~66M candidates/sec |
 | **Coverage (272K corpus)** | 197/197 queries | 187/197 queries |
 
 ## Usage

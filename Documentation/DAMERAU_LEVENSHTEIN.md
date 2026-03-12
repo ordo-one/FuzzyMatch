@@ -708,7 +708,12 @@ The traceback uses a full-matrix variant of the Damerau-Levenshtein DP (`editDis
 | 3 | Insertion (extra candidate char) | no | no |
 | 4 | Transposition | 2 | 2 (both swapped positions) |
 
-The DP operates in **substring mode** (free start: `cost[i][0] = 0`), finding the best match anywhere within the candidate. A guard prevents degenerate highlights: `dist < queryLength` ensures that full-substitution matches (where every query character is replaced) are not highlighted.
+The DP operates in one of two modes depending on the match kind:
+
+- **Prefix mode** (`prefixMode: true`): Used when the scoring pipeline identified a prefix match with `distance > 0`. Sets `cost[i][0] = i` (standard Levenshtein first column), anchoring the alignment at position 0 and limiting the candidate scan to `queryLen + maxEditDistance`. This ensures prefix-typo highlights always start at the beginning of the candidate.
+- **Substring mode** (`prefixMode: false`): Used for all other cases. Sets `cost[i][0] = 0` (free start), finding the best match anywhere within the candidate.
+
+A guard prevents degenerate highlights: `dist < queryLength` ensures that full-substitution matches (where every query character is replaced) are not highlighted.
 
 ### Examples
 
