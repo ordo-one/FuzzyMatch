@@ -24,7 +24,7 @@
 ///   - bonus: Precomputed per-position bonus values.
 ///   - config: Smith-Waterman scoring constants.
 /// - Returns: Array of matched normalized byte positions (one per query char),
-///   sorted ascending, or nil if no alignment found.
+///   or nil if no alignment found. The positions are not guaranteed to be sorted.
 internal func smithWatermanPositions(
     query: UnsafeBufferPointer<UInt8>,
     candidate: UnsafeBufferPointer<UInt8>,

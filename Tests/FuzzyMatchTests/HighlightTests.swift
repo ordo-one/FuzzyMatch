@@ -143,14 +143,13 @@ private func assertRangeInvariants(
 
 @Test func highlightAcronymFullCoverage() {
     // "icag" vs "International Consolidated Airlines Group" — 4/4 words
-    // The DP alignment may find valid non-acronym positions (e.g., lowercase 'a'
-    // inside "Consolidated") before the acronym path is tried. Either result is valid.
+    // With matchKind routing, the scorer identifies this as an acronym match
+    // and highlight() jumps directly to word-initial positions.
     let matcher = FuzzyMatcher()
     let candidate = "International Consolidated Airlines Group"
     let ranges = matcher.highlight(candidate, against: "icag")!
     let texts = highlightedText(candidate, ranges: ranges)
-    #expect(texts.count == 4)
-    #expect(texts.joined().lowercased() == "icag")
+    #expect(texts == ["I", "C", "A", "G"])
     assertRangeInvariants(candidate, ranges: ranges)
 }
 
@@ -346,15 +345,15 @@ private func assertRangeInvariants(
 }
 
 @Test func highlightLongCandidateOver512Bytes() {
-    // optimalAlignment falls back to greedy findMatchPositions for > 512 byte candidates
+    // Score gate: very long candidates are rejected by score() due to length
+    // penalty exceeding minScore, so highlight() must also return nil.
     let matcher = FuzzyMatcher()
     let prefix = String(repeating: "a", count: 520)
     let candidate = prefix + "target"
-    let ranges = matcher.highlight(candidate, against: "target")
-    #expect(ranges != nil)
-    if let ranges {
-        assertRangeInvariants(candidate, ranges: ranges)
-    }
+    var buffer = matcher.makeBuffer()
+    let query = matcher.prepare("target")
+    #expect(matcher.score(candidate, against: query, buffer: &buffer) == nil)
+    #expect(matcher.highlight(candidate, against: query) == nil)
 }
 
 // MARK: - Range Invariants
@@ -455,14 +454,13 @@ private func assertRangeInvariants(
 }
 
 @Test func highlightSWAcronymFallback() {
-    // SW DP may find a valid alignment (e.g., lowercase 'i' at start) before
-    // the acronym fallback is reached. Either result is valid highlighting.
+    // With matchKind routing, the scorer identifies this as an acronym match
+    // and highlight() jumps directly to word-initial positions.
     let matcher = FuzzyMatcher(config: .smithWaterman)
     let candidate = "International Consolidated Airlines Group"
     let ranges = matcher.highlight(candidate, against: "icag")!
     let texts = highlightedText(candidate, ranges: ranges)
-    #expect(texts.count == 4)
-    #expect(texts.joined().lowercased() == "icag")
+    #expect(texts == ["I", "C", "A", "G"])
     assertRangeInvariants(candidate, ranges: ranges)
 }
 
@@ -676,13 +674,15 @@ private func assertRangeInvariants(
 }
 
 @Test func highlightExtraCharInQuery() {
-    // "inputs" — extra 's' appended. ED traceback drops the trailing 's'
-    // (deletion from query) and highlights "Input" (5 candidate chars).
+    // "inputs" — extra 's' appended. ED traceback aligns "inputs" against
+    // "inputd" via substitution (s→d, distance 1), highlighting "InputD".
+    // The `<=` end-position selection picks the latest tied-cost alignment,
+    // which is correct for transpositions and yields a valid substitution here.
     let matcher = FuzzyMatcher()
     let candidate = "processUserInputData"
     let ranges = matcher.highlight(candidate, against: "inputs")!
     let texts = highlightedText(candidate, ranges: ranges)
-    #expect(texts == ["Input"])
+    #expect(texts == ["InputD"])
     assertRangeInvariants(candidate, ranges: ranges)
 }
 
@@ -1006,4 +1006,78 @@ private func assertRangeInvariants(
     let ranges = matcher.highlight(candidate, against: "mod")!
     #expect(ranges.count == 1, "Expected single contiguous range, got \(ranges.count)")
     #expect(highlightedText(candidate, ranges: ranges) == ["mod"])
+}
+
+// MARK: - Regression: Transposition Truncation
+
+@Test func highlightTranspositionNotTruncated() {
+    // "USD" vs query "UDS" — transposition at end. Must highlight all 3 chars,
+    // not truncate to 2 by picking the earliest tied end position.
+    let matcher = FuzzyMatcher()
+    let candidate = "USD"
+    let ranges = matcher.highlight(candidate, against: "UDS")!
+    let texts = highlightedText(candidate, ranges: ranges)
+    #expect(texts == ["USD"])
+    assertRangeInvariants(candidate, ranges: ranges)
+}
+
+@Test func highlightTranspositionModNotTruncated() {
+    // "mod" vs query "mdo" — transposition at end.
+    let matcher = FuzzyMatcher()
+    let candidate = "mod"
+    let ranges = matcher.highlight(candidate, against: "mdo")!
+    let texts = highlightedText(candidate, ranges: ranges)
+    #expect(texts == ["mod"])
+    assertRangeInvariants(candidate, ranges: ranges)
+}
+
+// MARK: - Regression: Score/Highlight Divergence
+
+@Test func highlightNilWhenScoreRejectsShortQuery() {
+    // "USD Fund" vs "UDS": score() rejects this (short query, high distance
+    // relative to length). highlight() must also return nil.
+    let matcher = FuzzyMatcher()
+    var buffer = matcher.makeBuffer()
+    let query = matcher.prepare("UDS")
+    let scoreResult = matcher.score("USD Fund", against: query, buffer: &buffer)
+    let highlightResult = matcher.highlight("USD Fund", against: query)
+    #expect(scoreResult == nil)
+    #expect(highlightResult == nil)
+}
+
+@Test func highlightNilWhenMinScoreRejects() {
+    // With a high minScore threshold, score() rejects "format:modern" for "mod"
+    // but highlight()'s independent alignment would find it. The score gate prevents this.
+    let config = MatchConfig(minScore: 0.99, algorithm: .editDistance())
+    let matcher = FuzzyMatcher(config: config)
+    var buffer = matcher.makeBuffer()
+    let query = matcher.prepare("mod")
+    let scoreResult = matcher.score("format:modern", against: query, buffer: &buffer)
+    let highlightResult = matcher.highlight("format:modern", against: query)
+    #expect(scoreResult == nil)
+    #expect(highlightResult == nil)
+}
+
+// MARK: - Regression: Acronym Match-Kind Routing
+
+@Test func highlightEDAcronymWordInitials() {
+    // ED mode: "iag" vs "International Consolidated Airlines Group"
+    // The scorer identifies this as .acronym → highlight must show word-initial I, A, G.
+    let matcher = FuzzyMatcher()
+    let candidate = "International Consolidated Airlines Group"
+    let ranges = matcher.highlight(candidate, against: "iag")!
+    let texts = highlightedText(candidate, ranges: ranges)
+    #expect(texts == ["I", "A", "G"])
+    assertRangeInvariants(candidate, ranges: ranges)
+}
+
+@Test func highlightSWAcronymWordInitials() {
+    // SW mode: "iag" vs "International Consolidated Airlines Group"
+    // The scorer identifies this as .acronym → highlight must show word-initial I, A, G.
+    let matcher = FuzzyMatcher(config: .smithWaterman)
+    let candidate = "International Consolidated Airlines Group"
+    let ranges = matcher.highlight(candidate, against: "iag")!
+    let texts = highlightedText(candidate, ranges: ranges)
+    #expect(texts == ["I", "A", "G"])
+    assertRangeInvariants(candidate, ranges: ranges)
 }

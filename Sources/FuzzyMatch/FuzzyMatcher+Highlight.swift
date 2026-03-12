@@ -88,9 +88,18 @@ extension FuzzyMatcher {
             return []
         }
 
+        // Score gate: ensure highlight never returns ranges for rejected candidates
+        var buffer = makeBuffer()
+        guard let scoreResult = score(candidate, against: query, buffer: &buffer) else {
+            return nil
+        }
+
         var mutableCandidate = candidate
         return mutableCandidate.withUTF8 { candidateUTF8 in
-            highlightImpl(candidateUTF8, candidate: candidate, against: query)
+            highlightImpl(
+                candidateUTF8, candidate: candidate, against: query,
+                matchKind: scoreResult.kind
+            )
         }
     }
 
@@ -107,13 +116,29 @@ extension FuzzyMatcher {
         highlight(candidate, against: prepare(query))
     }
 
+    // MARK: - Constants
+
+    /// Maximum candidate length (in normalized bytes) for DP-optimal alignment.
+    /// Longer candidates fall back to greedy `findMatchPositions`.
+    private static let optimalAlignmentLengthThreshold = 512
+
+    /// Number of positions covered by the compressed `UInt64` boundary mask.
+    private static let boundaryMaskBitWidth = 64
+
+    /// Minimum query length for acronym matching.
+    private static let minAcronymQueryLength = 2
+
+    /// Maximum query length for acronym matching.
+    private static let maxAcronymQueryLength = 8
+
     // MARK: - Implementation
 
     /// Core highlight implementation operating on UTF-8 bytes.
     private func highlightImpl(
         _ candidateUTF8: UnsafeBufferPointer<UInt8>,
         candidate: String,
-        against query: FuzzyQuery
+        against query: FuzzyQuery,
+        matchKind: MatchKind
     ) -> [Range<String.Index>]? {
         let candidateLength = candidateUTF8.count
         let queryLength = query.lowercased.count
@@ -152,7 +177,8 @@ extension FuzzyMatcher {
                 candidateUTF8: candidateUTF8,
                 isASCII: isASCII,
                 query: query,
-                edConfig: edConfig
+                edConfig: edConfig,
+                matchKind: matchKind
             )
 
         case .smithWaterman(let swConfig):
@@ -161,7 +187,8 @@ extension FuzzyMatcher {
                 candidateUTF8: candidateUTF8,
                 isASCII: isASCII,
                 query: query,
-                swConfig: swConfig
+                swConfig: swConfig,
+                matchKind: matchKind
             )
         }
 
@@ -294,7 +321,8 @@ extension FuzzyMatcher {
         candidateUTF8: UnsafeBufferPointer<UInt8>,
         isASCII: Bool,
         query: FuzzyQuery,
-        edConfig: EditDistanceConfig
+        edConfig: EditDistanceConfig,
+        matchKind: MatchKind
     ) -> [Int]? {
         let queryLength = query.lowercased.count
         let normalizedLength = normalizedBytes.count
@@ -304,6 +332,16 @@ extension FuzzyMatcher {
                 let boundaryMask = computeBoundaryMaskCompressed(
                     originalBytes: candidateUTF8, isASCII: isASCII
                 )
+
+                // Acronym match: jump directly to word-initial positions
+                if matchKind == .acronym {
+                    return findAcronymPositions(
+                        querySpan: querySpan,
+                        candidateSpan: candidateSpan,
+                        boundaryMask: boundaryMask,
+                        candidateLength: normalizedLength
+                    )
+                }
 
                 // Try prefix match first
                 var edState = EditDistanceState(maxQueryLength: queryLength)
@@ -369,7 +407,7 @@ extension FuzzyMatcher {
                     }
                     // Greedy failed (boundary preference can skip viable positions).
                     // Fall back to DP-optimal alignment which considers all options.
-                    if normalizedLength <= 512 {
+                    if normalizedLength <= Self.optimalAlignmentLengthThreshold {
                         var alignState = AlignmentState(
                             maxQueryLength: queryLength,
                             maxCandidateLength: normalizedLength
@@ -386,7 +424,7 @@ extension FuzzyMatcher {
                             return Array(matchPositions[0..<dpCount])
                         }
                     }
-                } else if normalizedLength <= 512 {
+                } else if normalizedLength <= Self.optimalAlignmentLengthThreshold {
                     var alignState = AlignmentState(
                         maxQueryLength: queryLength,
                         maxCandidateLength: normalizedLength
@@ -412,16 +450,6 @@ extension FuzzyMatcher {
                     if posCount == queryLength {
                         return Array(matchPositions[0..<posCount])
                     }
-                }
-
-                // Try acronym
-                if let acronymPositions = findAcronymPositions(
-                    querySpan: querySpan,
-                    candidateSpan: candidateSpan,
-                    boundaryMask: boundaryMask,
-                    candidateLength: normalizedLength
-                ) {
-                    return acronymPositions
                 }
 
                 // ED traceback for queries with typos (substitutions, missing/extra
@@ -451,10 +479,27 @@ extension FuzzyMatcher {
         candidateUTF8: UnsafeBufferPointer<UInt8>,
         isASCII: Bool,
         query: FuzzyQuery,
-        swConfig: SmithWatermanConfig
+        swConfig: SmithWatermanConfig,
+        matchKind: MatchKind
     ) -> [Int]? {
-        let queryLength = query.lowercased.count
         let normalizedLength = normalizedBytes.count
+
+        // Acronym match: jump directly to word-initial positions
+        if matchKind == .acronym {
+            return normalizedBytes.withUnsafeBufferPointer { candidateSpan in
+                query.lowercased.withUnsafeBufferPointer { querySpan in
+                    let boundaryMask = computeBoundaryMaskCompressed(
+                        originalBytes: candidateUTF8, isASCII: isASCII
+                    )
+                    return findAcronymPositions(
+                        querySpan: querySpan,
+                        candidateSpan: candidateSpan,
+                        boundaryMask: boundaryMask,
+                        candidateLength: normalizedLength
+                    )
+                }
+            }
+        }
 
         // Compute per-position bonuses (mirrors scoreSmithWatermanImpl merged pass)
         var bonusArray = [Int32](repeating: 0, count: normalizedLength)
@@ -498,19 +543,6 @@ extension FuzzyMatcher {
                         config: swConfig
                     ) {
                         return positions
-                    }
-
-                    // Acronym fallback for short queries
-                    if queryLength >= 2 && queryLength <= 8 {
-                        let boundaryMask = computeBoundaryMaskCompressed(
-                            originalBytes: candidateUTF8, isASCII: isASCII
-                        )
-                        return findAcronymPositions(
-                            querySpan: querySpan,
-                            candidateSpan: candidateSpan,
-                            boundaryMask: boundaryMask,
-                            candidateLength: normalizedLength
-                        )
                     }
 
                     return nil
@@ -761,18 +793,19 @@ extension FuzzyMatcher {
         candidateLength: Int
     ) -> [Int]? {
         let queryLength = querySpan.count
-        guard queryLength >= 2 && queryLength <= 8 else { return nil }
+        guard queryLength >= Self.minAcronymQueryLength
+            && queryLength <= Self.maxAcronymQueryLength else { return nil }
 
         // Collect word-initial positions and their bytes
         var initials: [(pos: Int, byte: UInt8)] = []
-        let limit = min(candidateLength, 64)
+        let limit = min(candidateLength, Self.boundaryMaskBitWidth)
         for i in 0..<limit {
             if (boundaryMask & (1 << i)) != 0 {
                 initials.append((pos: i, byte: candidateSpan[i]))
             }
         }
-        if candidateLength > 64 {
-            for i in 64..<candidateLength {
+        if candidateLength > Self.boundaryMaskBitWidth {
+            for i in Self.boundaryMaskBitWidth..<candidateLength {
                 if isWordBoundary(at: i, in: candidateSpan) {
                     initials.append((pos: i, byte: candidateSpan[i]))
                 }

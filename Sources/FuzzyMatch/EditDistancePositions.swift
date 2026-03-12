@@ -115,7 +115,7 @@ internal func editDistancePositions(
     var bestEnd = -1
     for i in 1...candidateLen {
         let dist = cost[i * cols + queryLen]
-        if dist < bestDist {
+        if dist <= bestDist {
             bestDist = dist
             bestEnd = i
         }
