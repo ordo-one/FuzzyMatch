@@ -165,7 +165,7 @@ public struct FuzzyMatcher: Sendable {
         var lowercased = [UInt8](repeating: 0, count: utf8Bytes.count)
         let isASCII = utf8Bytes.allSatisfy { $0 < 0x80 }
         let lowercasedLength = utf8Bytes.withUnsafeBufferPointer { ptr in
-            lowercaseUTF8(from: ptr, into: &lowercased, isASCII: isASCII)
+            lowercaseUTF8(from: ptr, into: &lowercased, mapping: nil, isASCII: isASCII)
         }
 
         // Truncate to actual length (combining marks may have been stripped)
@@ -458,7 +458,10 @@ public struct FuzzyMatcher: Sendable {
             matchPositions = [Int](repeating: 0, count: queryLength)
         }
 
-        let actualCandidateLength = lowercaseUTF8(from: candidateUTF8, into: &candidateStorage.bytes, isASCII: candidateIsASCII)
+        let actualCandidateLength = lowercaseUTF8(
+            from: candidateUTF8, into: &candidateStorage.bytes,
+            mapping: nil, isASCII: candidateIsASCII
+        )
 
         // Phase 2: Exact match (early exit — before buffer pointers, uses Array subscript)
         if let exact = checkExactMatch(

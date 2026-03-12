@@ -205,8 +205,9 @@ extension FuzzyMatcher {
 
     // MARK: - Normalization Mapping
 
-    /// Builds a normalization mapping that mirrors `lowercaseUTF8()` but tracks
-    /// the original byte offset for each normalized byte.
+    /// Builds a normalization mapping that tracks the original byte offset for
+    /// each normalized byte. Delegates to ``lowercaseUTF8(from:into:mapping:isASCII:)``
+    /// with a non-nil mapping pointer.
     ///
     /// `mapping[normalizedIndex]` gives the original byte offset of the source
     /// character that produced that normalized byte.
@@ -218,99 +219,22 @@ extension FuzzyMatcher {
         var mapping = [Int](repeating: 0, count: count)
         let isASCII = source.allSatisfy { $0 < 0x80 }
 
-        if isASCII {
-            for i in 0..<count {
-                normalized[i] = confusableASCIIToCanonical(lowercaseASCII(source[i]))
-                mapping[i] = i
-            }
-            return (normalized, mapping, true)
-        }
-
-        var i = 0
-        var outIdx = 0
-        while i < count {
-            let byte = source[i]
-
-            // Skip combining diacritical marks
-            if i + 1 < count && isCombiningMark(lead: byte, second: source[i + 1]) {
-                i += 2
-            } else if byte == 0xC3 && i + 1 < count {
-                let lowered = lowercaseLatinExtended(source[i + 1])
-                let ascii = latin1ToASCII(lowered)
-                if ascii != 0 {
-                    // 2 source bytes → 1 output byte
-                    normalized[outIdx] = ascii
-                    mapping[outIdx] = i
-                    outIdx += 1
-                } else {
-                    normalized[outIdx] = byte
-                    mapping[outIdx] = i
-                    normalized[outIdx + 1] = lowered
-                    mapping[outIdx + 1] = i
-                    outIdx += 2
-                }
-                i += 2
-            } else if (byte == 0xCE || byte == 0xCF) && i + 1 < count {
-                let (newLead, newSecond) = lowercaseGreek(lead: byte, second: source[i + 1])
-                normalized[outIdx] = newLead
-                mapping[outIdx] = i
-                normalized[outIdx + 1] = newSecond
-                mapping[outIdx + 1] = i
-                outIdx += 2
-                i += 2
-            } else if (byte == 0xD0 || byte == 0xD1) && i + 1 < count {
-                let (newLead, newSecond) = lowercaseCyrillic(lead: byte, second: source[i + 1])
-                normalized[outIdx] = newLead
-                mapping[outIdx] = i
-                normalized[outIdx + 1] = newSecond
-                mapping[outIdx + 1] = i
-                outIdx += 2
-                i += 2
-            } else if (byte == 0xC2 || byte == 0xCA) && i + 1 < count {
-                let ascii = confusable2ByteToASCII(lead: byte, second: source[i + 1])
-                if ascii != 0 {
-                    normalized[outIdx] = ascii
-                    mapping[outIdx] = i
-                    outIdx += 1
-                } else {
-                    normalized[outIdx] = byte
-                    mapping[outIdx] = i
-                    normalized[outIdx + 1] = source[i + 1]
-                    mapping[outIdx + 1] = i
-                    outIdx += 2
-                }
-                i += 2
-            } else if byte == 0xE2 && i + 2 < count {
-                let ascii = confusable3ByteToASCII(second: source[i + 1], third: source[i + 2])
-                if ascii != 0 {
-                    normalized[outIdx] = ascii
-                    mapping[outIdx] = i
-                    outIdx += 1
-                } else {
-                    normalized[outIdx] = byte
-                    mapping[outIdx] = i
-                    normalized[outIdx + 1] = source[i + 1]
-                    mapping[outIdx + 1] = i
-                    normalized[outIdx + 2] = source[i + 2]
-                    mapping[outIdx + 2] = i
-                    outIdx += 3
-                }
-                i += 3
-            } else {
-                normalized[outIdx] = confusableASCIIToCanonical(lowercaseASCII(byte))
-                mapping[outIdx] = i
-                outIdx += 1
-                i += 1
-            }
+        let outLength = mapping.withUnsafeMutableBufferPointer { mappingPtr in
+            lowercaseUTF8(
+                from: source,
+                into: &normalized,
+                mapping: mappingPtr.baseAddress,
+                isASCII: isASCII
+            )
         }
 
         // Truncate to actual length
-        if outIdx < count {
-            normalized.removeSubrange(outIdx..<count)
-            mapping.removeSubrange(outIdx..<count)
+        if outLength < count {
+            normalized.removeSubrange(outLength..<count)
+            mapping.removeSubrange(outLength..<count)
         }
 
-        return (normalized, mapping, false)
+        return (normalized, mapping, isASCII)
     }
 
     // MARK: - Edit Distance Highlight
