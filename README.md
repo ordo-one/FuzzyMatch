@@ -23,6 +23,7 @@ Full [API documentation](https://swiftpackageindex.com/ordo-one/FuzzyMatch/docum
 - **Word Boundary Bonuses** - Intelligent scoring that rewards matches at camelCase and snake_case boundaries
 - **Subsequence Matching** - Match abbreviations like "gubi" to "getUserById"
 - **Acronym Matching** - Match word-initial abbreviations like "bms" to "Bristol-Myers Squibb"
+- **Highlight Ranges** - Get `[Range<String.Index>]` for matched characters in scored results, with full support for typos, transpositions, and Unicode normalization
 
 ## Installation
 
@@ -233,6 +234,59 @@ await withTaskGroup(of: [ScoredMatch].self) { group in
         // Handle matches...
     }
 }
+```
+
+### Highlighting Matched Characters
+
+After scoring, use `highlight()` to get ranges of matched characters for UI display. Call it only for visible results (typically ~10-20), not the full corpus:
+
+```swift
+let matcher = FuzzyMatcher()
+let query = matcher.prepare("mod")
+
+if let ranges = matcher.highlight("format:modern", against: query) {
+    // ranges highlights "mod" in "modern" — a single contiguous range
+    var text = AttributedString("format:modern")
+    for range in ranges {
+        let start = AttributedString.Index(range.lowerBound, within: text)!
+        let end = AttributedString.Index(range.upperBound, within: text)!
+        text[start..<end].foregroundColor = .accentColor
+    }
+}
+```
+
+The returned ranges are coalesced (adjacent matches merged) and sorted. Highlights work with both matching modes and handle:
+
+- **Exact matches** — single range covering the full string
+- **Subsequence matches** — scattered ranges at matched positions (e.g., `["g", "U", "B", "I"]` for "gubi" in "getUserById")
+- **Acronym matches** — word-initial positions (e.g., `["B", "M", "S"]` for "bms" in "Bristol-Myers Squibb")
+- **Unicode normalization** — diacritics (`"café"` highlighted for query `"cafe"`), combining marks, and confusable characters
+
+**Typo-tolerant highlighting (edit distance mode):** When a query contains typos, the highlight shows which candidate characters participated in the alignment — including substituted positions:
+
+```swift
+let matcher = FuzzyMatcher()
+
+// Typo: 'a' instead of 'e' — highlights "getUser" (substituted 'e' included)
+matcher.highlight("getUserById", against: "getusar")   // → ["getUser"]
+
+// Missing character — highlights around the gap
+matcher.highlight("format:modern", against: "modrn")   // → ["mod", "rn"]
+
+// Doubled character — extra char absorbed, highlights normally
+matcher.highlight("getUserById", against: "geetuser")  // → ["getUser"]
+
+// Transposed characters — both positions highlighted
+matcher.highlight("getUserById", against: "gteuser")   // → ["getUser"]
+```
+
+**Smith-Waterman highlighting** uses the same API but runs the SW alignment DP with traceback instead. Multi-word queries highlight each atom independently:
+
+```swift
+let matcher = FuzzyMatcher(config: .smithWaterman)
+
+// Multi-word: both atoms highlighted
+matcher.highlight("fooXXXbar", against: "foo bar")     // → ["foo", "bar"]
 ```
 
 ### Filtering and Sorting Results
@@ -517,6 +571,14 @@ func topMatches(_ candidates: some Sequence<String>,
 // Convenience: all matches sorted by score
 func matches(_ candidates: some Sequence<String>,
              against query: FuzzyQuery) -> [MatchResult]
+
+// Highlighting: get matched character ranges for UI display
+func highlight(_ candidate: String,
+               against query: FuzzyQuery) -> [Range<String.Index>]?
+
+// Highlighting: convenience overload with raw query string
+func highlight(_ candidate: String,
+               against query: String) -> [Range<String.Index>]?
 ```
 
 ## License

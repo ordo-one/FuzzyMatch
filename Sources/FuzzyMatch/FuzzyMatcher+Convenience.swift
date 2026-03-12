@@ -131,7 +131,7 @@ extension FuzzyMatcher {
     ///
     /// This is a convenience method that handles query preparation internally.
     /// For scoring many queries against the same candidates, prefer the
-    /// ``prepare(_:)`` + ``topMatches(_:against:limit:)-7q3wo`` pattern instead.
+    /// ``prepare(_:)`` + ``topMatches(_:against:limit:)-(_,FuzzyQuery,_)`` pattern instead.
     ///
     /// - Parameters:
     ///   - candidates: The candidates to search.
@@ -151,7 +151,7 @@ extension FuzzyMatcher {
     ///
     /// This is a convenience method that handles query preparation internally.
     /// For scoring many queries against the same candidates, prefer the
-    /// ``prepare(_:)`` + ``matches(_:against:)-1fvd5`` pattern instead.
+    /// ``prepare(_:)`` + ``matches(_:against:)-(_,FuzzyQuery)`` pattern instead.
     ///
     /// - Parameters:
     ///   - candidates: The candidates to search.

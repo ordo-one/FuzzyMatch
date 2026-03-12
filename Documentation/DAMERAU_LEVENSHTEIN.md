@@ -12,10 +12,11 @@ This document provides a detailed explanation of the algorithms and techniques u
 6. [Scoring Bonuses](#scoring-bonuses)
 7. [Subsequence Matching](#subsequence-matching)
 8. [Acronym Matching](#acronym-matching)
-9. [Implementation Details](#implementation-details) — Query Preparation, Fast Paths, Zero-Allocation Design, UTF-8 Processing, Unicode Support, Match Strategy
-10. [Complexity Analysis](#complexity-analysis)
-11. [Fuzz Testing](#fuzz-testing)
-12. [References](#references)
+9. [Highlight Traceback](#highlight-traceback)
+10. [Implementation Details](#implementation-details) — Query Preparation, Fast Paths, Zero-Allocation Design, UTF-8 Processing, Unicode Support, Match Strategy
+11. [Complexity Analysis](#complexity-analysis)
+12. [Fuzz Testing](#fuzz-testing)
+13. [References](#references)
 
 ---
 
@@ -28,7 +29,8 @@ FuzzyMatcher implements a hybrid fuzzy string matching system. The system combin
 3. **Intelligent scoring bonuses** for intuitive ranking
 4. **Subsequence matching fallback** for abbreviation-style queries
 5. **Acronym matching** for word-initial abbreviations (e.g., "bms" → "Bristol-Myers Squibb")
-6. **Zero-allocation design** for high-throughput scenarios
+6. **Highlight traceback** for recovering matched character positions from the DP alignment
+7. **Zero-allocation design** for high-throughput scenarios
 
 The matching pipeline:
 
@@ -668,6 +670,66 @@ Query subsequence: b→b ✓, m→m ✓, s→s ✓
 Coverage: 3/3 = 1.0
 Score: 0.55 + 0.4 × 1.0 = 0.95
 ```
+
+---
+
+## Highlight Traceback
+
+The `highlight(_:against:)` method recovers matched character positions from the edit distance alignment for UI highlighting. It is completely separate from the scoring hot path — called only for the small number of visible results (~10-20), not the full corpus.
+
+### Highlight Pipeline
+
+The highlight method runs the same multi-phase pipeline as scoring, but in a priority-ordered fallback chain returning positions from the first match:
+
+```
+Query + Candidate → Normalize + Build Mapping → Prefix Check (dist == 0)
+                                                       ↓ (no)
+                                                 Substring Check (dist == 0)
+                                                       ↓ (no)
+                                                 Subsequence Alignment (greedy → DP)
+                                                       ↓ (no)
+                                                 Acronym Matching
+                                                       ↓ (no)
+                                                 ED Traceback (dist > 0, typos)
+                                                       ↓
+                                                 Map to String.Index → Coalesce Ranges
+```
+
+### ED Traceback for Typos
+
+When all character-preserving paths fail (prefix, substring, subsequence, acronym), the ED traceback handles queries containing typos — substitutions, missing characters, extra characters, and transpositions. This is the last resort in the pipeline.
+
+The traceback uses a full-matrix variant of the Damerau-Levenshtein DP (`editDistancePositions()`) that retains the complete DP table and traceback flags:
+
+| Trace Flag | Operation | Query char consumed | Candidate pos highlighted |
+|:----------:|-----------|:-------------------:|:-------------------------:|
+| 1 | Match/Substitution | yes | yes |
+| 2 | Deletion (extra query char) | yes | no |
+| 3 | Insertion (extra candidate char) | no | no |
+| 4 | Transposition | 2 | 2 (both swapped positions) |
+
+The DP operates in **substring mode** (free start: `cost[i][0] = 0`), finding the best match anywhere within the candidate. A guard prevents degenerate highlights: `dist < queryLength` ensures that full-substitution matches (where every query character is replaced) are not highlighted.
+
+### Examples
+
+**Typo (substitution):** query "getusar" vs "getUserById"
+- Subsequence/acronym paths fail because 'a' is not in "getUserById"
+- ED traceback finds distance-1 alignment: a→e substitution
+- Highlighted: "**getUser**" (positions 0-6, substitution at position 5 included)
+
+**Transposition:** query "Berkhsire" vs "Berkshire"
+- ED traceback finds distance-1 alignment: transposition of 'h' and 's'
+- Highlighted: "**Berkshire**" (both transposed positions included)
+
+**Missing character:** query "modrn" vs "format:modern"
+- ED traceback finds the substring "modern" with distance 1 (missing 'e')
+- Highlighted: "**m**" + "**drn**" (positions where query chars align)
+
+### Normalization Mapping
+
+The highlight method builds a `mapping[normalizedByteIndex] = originalByteOffset` array that tracks how normalized (lowercased, diacritic-stripped) byte positions correspond to positions in the original string. This is necessary because the DP operates on normalized bytes, but the caller needs `Range<String.Index>` into the original string.
+
+After traceback, normalized byte positions are mapped through this array to original byte offsets, then converted to `String.Index` values. Adjacent ranges are coalesced and combining marks are extended.
 
 ---
 

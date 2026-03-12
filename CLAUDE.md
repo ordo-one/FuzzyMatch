@@ -41,7 +41,8 @@ The library follows a pipeline architecture:
 4. **Smith-Waterman** (`SmithWaterman.swift`, `FuzzyMatcher+SmithWaterman.swift`) - Local alignment DP with tiered boundary bonuses, multi-word atom splitting, and integer arithmetic. Mirrors the normalization from Prefilters.swift in its merged lowercase+bonus pass
 5. **Scoring** (`ScoringBonuses.swift`, `WordBoundary.swift`) - Position-based bonuses for word boundaries, consecutive matches, and gap penalties (edit distance mode)
 6. **Acronym Matching** (`FuzzyMatcher.swift`) - Word-initial character matching for abbreviations (e.g., "bms" → "Bristol-Myers Squibb") — used by both modes
-7. **Result** (`ScoredMatch.swift`, `MatchKind.swift`) - Final score (0.0-1.0) with match type (exact/prefix/substring/acronym)
+7. **Highlight Ranges** (`FuzzyMatcher+Highlight.swift`, `EditDistancePositions.swift`, `SmithWatermanPositions.swift`) - Returns `[Range<String.Index>]` of matched character positions for UI highlighting. Separate from the scoring hot path — called only for visible results. Uses full-matrix DP traceback variants of both ED and SW algorithms to recover alignment positions
+8. **Result** (`ScoredMatch.swift`, `MatchKind.swift`) - Final score (0.0-1.0) with match type (exact/prefix/substring/acronym)
 
 ### Key Design Patterns
 
@@ -52,7 +53,7 @@ The library follows a pipeline architecture:
 
 ### Main Entry Point
 
-`FuzzyMatcher.swift` orchestrates the edit distance scoring pipeline via decomposed phase methods (`checkExactMatch`, `scorePrefix`, `scoreSubstring`, `scoreSubsequence`, `scoreAcronym`) coordinated through a `ScoringState` struct. `FuzzyMatcher+SmithWaterman.swift` handles Smith-Waterman scoring with a single DP pass and optional atom splitting. `FuzzyMatcher+Convenience.swift` provides convenience wrappers. The `score(_:against:buffer:)` method dispatches to the appropriate implementation based on `MatchConfig.algorithm`.
+`FuzzyMatcher.swift` orchestrates the edit distance scoring pipeline via decomposed phase methods (`checkExactMatch`, `scorePrefix`, `scoreSubstring`, `scoreSubsequence`, `scoreAcronym`) coordinated through a `ScoringState` struct. `FuzzyMatcher+SmithWaterman.swift` handles Smith-Waterman scoring with a single DP pass and optional atom splitting. `FuzzyMatcher+Highlight.swift` provides the `highlight(_:against:)` method that returns matched character ranges for UI display — it dispatches by algorithm mode and uses full-matrix DP traceback variants (`EditDistancePositions.swift`, `SmithWatermanPositions.swift`) separate from the scoring hot path. `FuzzyMatcher+Convenience.swift` provides convenience wrappers. The `score(_:against:buffer:)` method dispatches to the appropriate implementation based on `MatchConfig.algorithm`.
 
 **UTF-8 API** (highest throughput — enables cross-module inlining):
 ```swift
@@ -117,6 +118,7 @@ Tests use Swift Testing framework (`@Test` macro, `#expect()` assertions). Test 
 - `PrefilterTests.swift` / `TrigramTests.swift` - Fast rejection tests
 - `ScoringBonusTests.swift` / `WordBoundaryTests.swift` - Ranking tests (edit distance mode)
 - `AcronymMatchTests.swift` - Word-initial abbreviation matching tests
+- `HighlightTests.swift` - Highlight range extraction for UI display
 - `EdgeCaseTests.swift` - Boundary conditions
 
 ## Performance

@@ -22,6 +22,7 @@
 /// Both modes share:
 /// - Fast prefiltering using character bitmasks and trigrams
 /// - Zero-allocation hot path when using prepared queries and buffers
+/// - Highlight ranges for displaying matched characters in UI
 /// - Convenience methods for quick one-shot scoring and top-N matching
 ///
 /// ## Overview
@@ -72,9 +73,14 @@
 ///
 /// ### Convenience Scoring
 /// - ``score(_:against:)``
-/// - ``topMatches(_:against:limit:)``
-/// - ``matches(_:against:)``
+/// - ``topMatches(_:against:limit:)-(_,FuzzyQuery,_)``
+/// - ``topMatches(_:against:limit:)-(_,String,_)``
+/// - ``matches(_:against:)-(_,FuzzyQuery)``
+/// - ``matches(_:against:)-(_,String)``
 ///
+/// ### Highlighting
+/// - ``highlight(_:against:)-(_,FuzzyQuery)``
+/// - ``highlight(_:against:)-(_,String)``
 ///
 /// ## Example
 ///
