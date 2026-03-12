@@ -1058,6 +1058,43 @@ private func assertRangeInvariants(
     #expect(highlightResult == nil)
 }
 
+// MARK: - Regression: Prefix Typo Highlights
+
+@Test func highlightPrefixTypoTransposition() {
+    // "ifle" vs "fileName" — score() returns .prefix (transposition i↔f),
+    // highlight must anchor at position 0 and cover the leading "f".
+    let matcher = FuzzyMatcher()
+    let candidate = "fileName"
+    let ranges = matcher.highlight(candidate, against: "ifle")!
+    // Must include position 0 ("f")
+    #expect(ranges.first!.lowerBound == candidate.startIndex,
+            "Prefix typo highlight must start at position 0")
+    assertRangeInvariants(candidate, ranges: ranges)
+    assertHighlightedCharsMatchQuery(candidate, ranges: ranges, query: "ifle")
+}
+
+@Test func highlightPrefixTypoExtraChar() {
+    // "amrket" vs "Market" — score() returns .prefix (extra 'a' + transposition),
+    // highlight must anchor at position 0 and cover the leading "M".
+    let matcher = FuzzyMatcher()
+    let candidate = "Market"
+    let ranges = matcher.highlight(candidate, against: "amrket")!
+    #expect(ranges.first!.lowerBound == candidate.startIndex,
+            "Prefix typo highlight must start at position 0")
+    assertRangeInvariants(candidate, ranges: ranges)
+}
+
+@Test func highlightPrefixTypoShortTransposition() {
+    // "ba" vs "ab" — score() returns .prefix (transposition),
+    // highlight must cover both positions.
+    let matcher = FuzzyMatcher()
+    let candidate = "ab"
+    let ranges = matcher.highlight(candidate, against: "ba")!
+    let texts = highlightedText(candidate, ranges: ranges)
+    #expect(texts == ["ab"])
+    assertRangeInvariants(candidate, ranges: ranges)
+}
+
 // MARK: - Regression: Acronym Match-Kind Routing
 
 @Test func highlightEDAcronymWordInitials() {

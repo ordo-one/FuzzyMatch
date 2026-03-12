@@ -267,8 +267,30 @@ extension FuzzyMatcher {
                     )
                 }
 
-                // Try prefix match first
+                // Prefix match: anchor alignment at position 0
                 var edState = EditDistanceState(maxQueryLength: queryLength)
+                if matchKind == .prefix {
+                    let prefixDist = prefixEditDistance(
+                        query: querySpan,
+                        candidate: candidateSpan,
+                        state: &edState,
+                        maxEditDistance: query.effectiveMaxEditDistance
+                    )
+                    if let dist = prefixDist {
+                        if dist == 0 {
+                            return Array(0..<queryLength)
+                        }
+                        return editDistancePositions(
+                            query: querySpan,
+                            candidate: candidateSpan,
+                            maxEditDistance: dist,
+                            prefixMode: true
+                        )
+                    }
+                    return nil
+                }
+
+                // Try prefix match for exact prefix (dist == 0) before substring
                 let prefixDist = prefixEditDistance(
                     query: querySpan,
                     candidate: candidateSpan,

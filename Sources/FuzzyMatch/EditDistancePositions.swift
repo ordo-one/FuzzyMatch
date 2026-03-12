@@ -18,13 +18,16 @@
 /// recovered. It is NOT used on the scoring hot path — only called for the small
 /// number of visible results that need highlight ranges.
 ///
-/// The function operates in substring mode (free start: `cost[i][0] = 0`), so it
-/// finds the best match anywhere within the candidate.
+/// By default, the function operates in substring mode (free start: `cost[i][0] = 0`),
+/// finding the best match anywhere within the candidate. When `prefixMode` is `true`,
+/// the first column uses standard Levenshtein costs (`cost[i][0] = i`), anchoring the
+/// alignment at position 0, and limits the candidate scan to `queryLen + maxEditDistance`.
 ///
 /// - Parameters:
 ///   - query: Lowercased query bytes.
 ///   - candidate: Lowercased candidate bytes.
 ///   - maxEditDistance: Maximum allowed edit distance.
+///   - prefixMode: When `true`, anchor the alignment at position 0 (prefix match).
 /// - Returns: Sorted array of candidate byte positions to highlight, or nil
 ///   if no alignment within `maxEditDistance` is found.
 ///
@@ -43,10 +46,13 @@
 internal func editDistancePositions(
     query: UnsafeBufferPointer<UInt8>,
     candidate: UnsafeBufferPointer<UInt8>,
-    maxEditDistance: Int
+    maxEditDistance: Int,
+    prefixMode: Bool = false
 ) -> [Int]? {
     let queryLen = query.count
-    let candidateLen = candidate.count
+    let candidateLen = prefixMode
+        ? min(candidate.count, queryLen + maxEditDistance)
+        : candidate.count
     guard queryLen > 0, candidateLen > 0 else { return nil }
 
     let cols = queryLen + 1
@@ -63,7 +69,14 @@ internal func editDistancePositions(
         cost[j] = j
         trace[j] = 2
     }
-    // First column: cost[i][0] = 0 (substring mode: free start at any position)
+    // First column: in prefix mode cost[i][0] = i (standard Levenshtein);
+    // in substring mode cost[i][0] = 0 (free start at any position)
+    if prefixMode {
+        for i in 1...candidateLen {
+            cost[i * cols] = i
+            trace[i * cols] = 3
+        }
+    }
 
     for i in 1...candidateLen {
         let candidateChar = candidate[i - 1]
