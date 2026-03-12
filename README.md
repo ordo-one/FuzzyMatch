@@ -289,6 +289,8 @@ let matcher = FuzzyMatcher(config: .smithWaterman)
 matcher.highlight("fooXXXbar", against: "foo bar")     // → ["foo", "bar"]
 ```
 
+> **Performance:** `highlight()` is more expensive than `score()` — it allocates internally and runs a full-matrix DP traceback. Typical cost per call on short candidates (~8-30 characters): ~1.2 μs (ED), ~0.8 μs (SW). Highlighting 20 visible results takes ~24 μs (ED) or ~16 μs (SW).
+
 ### Filtering and Sorting Results
 
 Using the convenience API:

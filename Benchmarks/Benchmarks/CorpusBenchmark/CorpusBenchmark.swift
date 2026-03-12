@@ -337,4 +337,66 @@ let benchmarks: @Sendable () -> Void = {
             matcher.score(candidate, against: prepared[qi], buffer: &buffer)
         }
     }
+
+    // MARK: - Highlight Benchmarks
+
+    Benchmark(
+        "Highlight - ED all queries",
+        configuration: .init(
+            metrics: [.instructions, .mallocCountTotal, .objectAllocCount, .retainCount, .releaseCount],
+            warmupIterations: 1,
+            scalingFactor: .mega
+        )
+    ) { benchmark in
+        let queries = holder.allQueries
+        let matcher = FuzzyMatcher()
+
+        let prepared = queries.map { matcher.prepare($0.text) }
+        let pools = queries.map { holder.candidates(for: $0.field) }
+
+        let candidateCount = pools[0].count
+        var qi = 0
+        var ci = 0
+        for _ in benchmark.scaledIterations {
+            blackHole(matcher.highlight(pools[qi][ci], against: prepared[qi]))
+            ci &+= 1
+            if ci >= candidateCount {
+                ci = 0
+                qi &+= 1
+                if qi >= prepared.count {
+                    qi = 0
+                }
+            }
+        }
+    }
+
+    Benchmark(
+        "Highlight - SW all queries",
+        configuration: .init(
+            metrics: [.instructions, .mallocCountTotal, .objectAllocCount, .retainCount, .releaseCount],
+            warmupIterations: 1,
+            scalingFactor: .mega
+        )
+    ) { benchmark in
+        let queries = holder.allQueries
+        let matcher = FuzzyMatcher(config: .smithWaterman)
+
+        let prepared = queries.map { matcher.prepare($0.text) }
+        let pools = queries.map { holder.candidates(for: $0.field) }
+
+        let candidateCount = pools[0].count
+        var qi = 0
+        var ci = 0
+        for _ in benchmark.scaledIterations {
+            blackHole(matcher.highlight(pools[qi][ci], against: prepared[qi]))
+            ci &+= 1
+            if ci >= candidateCount {
+                ci = 0
+                qi &+= 1
+                if qi >= prepared.count {
+                    qi = 0
+                }
+            }
+        }
+    }
 }
