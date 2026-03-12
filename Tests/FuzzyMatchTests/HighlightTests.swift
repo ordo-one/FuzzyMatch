@@ -853,6 +853,148 @@ private func assertRangeInvariants(
     }
 }
 
+// MARK: - Greek and Cyrillic Normalization
+
+@Test func highlightGreekCaseInsensitive() {
+    // Greek uppercase ΑΒΓΔ should match lowercase query "αβγ" via case folding
+    let matcher = FuzzyMatcher()
+    let candidate = "ΑΒΓΔ"
+    let ranges = matcher.highlight(candidate, against: "αβγ")!
+    let texts = highlightedText(candidate, ranges: ranges)
+    #expect(texts == ["ΑΒΓ"])
+    assertRangeInvariants(candidate, ranges: ranges)
+}
+
+@Test func highlightGreekSW() {
+    let matcher = FuzzyMatcher(config: .smithWaterman)
+    let candidate = "ΑΒΓΔ"
+    let ranges = matcher.highlight(candidate, against: "αβγ")!
+    let texts = highlightedText(candidate, ranges: ranges)
+    #expect(texts == ["ΑΒΓ"])
+    assertRangeInvariants(candidate, ranges: ranges)
+}
+
+@Test func highlightCyrillicCaseInsensitive() {
+    // Cyrillic МОСКВА should match "москва" as exact (score 1.0)
+    let matcher = FuzzyMatcher()
+    let candidate = "МОСКВА"
+    let ranges = matcher.highlight(candidate, against: "москва")!
+    #expect(ranges.count == 1)
+    #expect(highlightedText(candidate, ranges: ranges) == ["МОСКВА"])
+    assertRangeInvariants(candidate, ranges: ranges)
+}
+
+@Test func highlightCyrillicSW() {
+    let matcher = FuzzyMatcher(config: .smithWaterman)
+    let candidate = "МОСКВА"
+    let ranges = matcher.highlight(candidate, against: "москва")!
+    #expect(ranges.count == 1)
+    #expect(highlightedText(candidate, ranges: ranges) == ["МОСКВА"])
+    assertRangeInvariants(candidate, ranges: ranges)
+}
+
+// MARK: - 4-Byte UTF-8 (Emoji)
+
+@Test func highlightAroundEmoji() {
+    // "done" after a 4-byte emoji — tests range mapping for 4-byte chars
+    let matcher = FuzzyMatcher()
+    let candidate = "test🎉done"
+    let ranges = matcher.highlight(candidate, against: "done")!
+    let texts = highlightedText(candidate, ranges: ranges)
+    #expect(texts == ["done"])
+    assertRangeInvariants(candidate, ranges: ranges)
+}
+
+@Test func highlightBeforeEmoji() {
+    let matcher = FuzzyMatcher()
+    let candidate = "test🎉done"
+    let ranges = matcher.highlight(candidate, against: "test")!
+    let texts = highlightedText(candidate, ranges: ranges)
+    #expect(texts == ["test"])
+    assertRangeInvariants(candidate, ranges: ranges)
+}
+
+@Test func highlightAroundEmojiSW() {
+    let matcher = FuzzyMatcher(config: .smithWaterman)
+    let candidate = "test🎉done"
+    let ranges = matcher.highlight(candidate, against: "done")!
+    let texts = highlightedText(candidate, ranges: ranges)
+    #expect(texts == ["done"])
+    assertRangeInvariants(candidate, ranges: ranges)
+}
+
+// MARK: - Non-Confusable Multi-Byte Passthrough
+
+@Test func highlightNonConfusable0xE2() {
+    // "™" (E2 84 A2) is NOT a confusable — should pass through without mapping
+    let matcher = FuzzyMatcher()
+    let candidate = "FuzzyMatch™"
+    let ranges = matcher.highlight(candidate, against: "fuzzymatch")!
+    let texts = highlightedText(candidate, ranges: ranges)
+    #expect(texts == ["FuzzyMatch"])
+    assertRangeInvariants(candidate, ranges: ranges)
+}
+
+@Test func highlightNonConfusable0xC2() {
+    // "£" (C2 A3) is NOT a confusable — should pass through
+    let matcher = FuzzyMatcher()
+    let candidate = "price£100"
+    let ranges = matcher.highlight(candidate, against: "price")!
+    let texts = highlightedText(candidate, ranges: ranges)
+    #expect(texts == ["price"])
+    assertRangeInvariants(candidate, ranges: ranges)
+}
+
+@Test func highlightLatin1NonASCIIPassthrough() {
+    // "ð" (C3 B0) doesn't map to an ASCII base letter — tests the non-ASCII
+    // Latin-1 passthrough path in buildNormalizationMapping
+    let matcher = FuzzyMatcher()
+    let candidate = "Reykjavíkurð"
+    let ranges = matcher.highlight(candidate, against: "reykjavik")!
+    let texts = highlightedText(candidate, ranges: ranges)
+    #expect(texts == ["Reykjavík"])
+    assertRangeInvariants(candidate, ranges: ranges)
+}
+
+// MARK: - SW Edge Cases: Nil Paths
+
+@Test func highlightSWMultiAtomOneFails() {
+    // "foo zzz" vs "fooXXXbar" — 'zzz' atom not in candidate → nil
+    let matcher = FuzzyMatcher(config: .smithWaterman)
+    #expect(matcher.highlight("fooXXXbar", against: "foo zzz") == nil)
+}
+
+@Test func highlightSWSingleNilAcronymNil() {
+    // "zz" vs "abcdef" — no SW alignment and no acronym match → nil
+    let matcher = FuzzyMatcher(config: .smithWaterman)
+    #expect(matcher.highlight("abcdef", against: "zz") == nil)
+}
+
+// MARK: - SW Gap-End Traceback
+
+@Test func highlightSWScatteredWithGap() {
+    // "ac" vs "aXXXXXc" — tests the gap traceback path in smithWatermanPositions
+    let matcher = FuzzyMatcher(config: .smithWaterman)
+    let candidate = "aXXXXXc"
+    let ranges = matcher.highlight(candidate, against: "ac")!
+    let texts = highlightedText(candidate, ranges: ranges)
+    #expect(texts == ["a", "c"])
+    assertRangeInvariants(candidate, ranges: ranges)
+}
+
+// MARK: - Short Query Greedy → DP Fallback
+
+@Test func highlightShortQueryGreedyToDPFallback() {
+    // "ace" vs "abcde_ace" — greedy finds scattered a(0),c(2),e(4) but the
+    // contiguous substring "ace" at positions 6-8 is the correct highlight.
+    let matcher = FuzzyMatcher()
+    let candidate = "abcde_ace"
+    let ranges = matcher.highlight(candidate, against: "ace")!
+    let texts = highlightedText(candidate, ranges: ranges)
+    #expect(texts == ["ace"])
+    assertRangeInvariants(candidate, ranges: ranges)
+}
+
 // MARK: - Regression: Issue Motivating Example
 
 @Test func highlightModAgainstFormatModernIsContiguous() {
