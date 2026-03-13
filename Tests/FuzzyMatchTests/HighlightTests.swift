@@ -1290,6 +1290,8 @@ func issue16_modaldfc_modalek_highlightsOnlyModal() {
 
 // MARK: - AttributedString Convenience API
 
+#if canImport(Foundation)
+
 @Test func attributedHighlightBasicMatch() {
     let matcher = FuzzyMatcher()
     let query = matcher.prepare("mod")
@@ -1363,7 +1365,7 @@ func issue16_modaldfc_modalek_highlightsOnlyModal() {
 
 // MARK: - SwiftUI-specific AttributedString tests (Apple platforms only)
 
-#if canImport(SwiftUI)
+#if canImport(SwiftUI) // SwiftUI implies Foundation
 
 @Test func attributedHighlightSwiftUIForegroundColor() {
     let matcher = FuzzyMatcher()
@@ -1404,4 +1406,6 @@ func issue16_modaldfc_modalek_highlightsOnlyModal() {
     }
 }
 
-#endif
+#endif // canImport(SwiftUI)
+
+#endif // canImport(Foundation)

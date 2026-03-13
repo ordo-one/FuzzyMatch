@@ -11,6 +11,7 @@
 //
 // ===----------------------------------------------------------------------===//
 
+#if canImport(Foundation)
 import Foundation
 
 extension FuzzyMatcher {
@@ -97,3 +98,4 @@ extension FuzzyMatcher {
         attributedHighlight(candidate, against: prepare(query), applying: style)
     }
 }
+#endif
