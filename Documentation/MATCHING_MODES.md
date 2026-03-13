@@ -14,7 +14,7 @@ For detailed algorithm internals, see [DAMERAU_LEVENSHTEIN.md](DAMERAU_LEVENSHTE
 | **Typo handling** | Native transposition support | No transposition operation |
 | **Prefix awareness** | Explicit prefix scoring phase | No prefix concept (treats all substrings equally) |
 | **Multi-word queries** | Treated monolithically | Atom splitting with AND semantics |
-| **Throughput** | ~32M candidates/sec | ~66M candidates/sec |
+| **Throughput** | ~33M candidates/sec | ~66M candidates/sec |
 | **Coverage (272K corpus)** | 197/197 queries | 187/197 queries |
 
 ## Usage
@@ -133,5 +133,40 @@ Tested on a 272K financial instruments corpus with 197 queries across 9 categori
 | Abbreviation | 12 | 5/12 | Mixed (both have acronym matching) |
 
 Overall top-1 agreement between modes: **79/197 (40%)**. They are complementary algorithms that excel in different scenarios.
+
+## Highlighting Matched Characters
+
+Both modes support highlighting via `highlight(_:against:)`, which returns `[Range<String.Index>]` of matched character positions for UI display. The highlight method is completely separate from the scoring hot path and uses full-matrix DP traceback variants to recover alignment positions.
+
+### Behavior by Mode
+
+| Aspect | Edit Distance | Smith-Waterman |
+|--------|---------------|----------------|
+| **Highlight pipeline** | Multi-phase: prefix → substring → subsequence → acronym → ED traceback | Single SW DP traceback + acronym fallback |
+| **Typo highlighting** | Highlights substituted positions (shows where user "meant") | No typo support — query chars must exist in candidate |
+| **Transposition highlighting** | Both swapped positions highlighted | N/A |
+| **Multi-word queries** | Monolithic alignment | Per-atom highlighting (one SW pass per word) |
+| **Acronym highlighting** | Word-initial characters highlighted | Word-initial characters highlighted |
+
+### Usage
+
+```swift
+let matcher = FuzzyMatcher()           // ED mode
+let swMatcher = FuzzyMatcher(config: .smithWaterman)
+
+// Both modes use the same API
+if let ranges = matcher.highlight("getUserById", against: "getuser") {
+    // ranges covers "getUser" in "getUserById"
+}
+
+// ED mode handles typos — SW mode would return nil for this query
+if let ranges = matcher.highlight("Berkshire", against: "Berkhsire") {
+    // ranges covers "Berkshire" (transposition corrected)
+}
+```
+
+### Consistency with Scoring
+
+The `highlight()` method is designed to be consistent with `score()`: if `score()` returns a match, `highlight()` should also return ranges for that candidate. Both methods use the same normalization (case folding, diacritic stripping, confusable normalization) so highlight positions map correctly back to the original string.
 
 See [COMPARISON.md](COMPARISON.md) for full per-query results and top-3 analysis.

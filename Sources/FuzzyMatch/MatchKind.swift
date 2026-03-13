@@ -95,7 +95,7 @@ public enum MatchKind: Sendable, Hashable, CaseIterable, Codable, CustomStringCo
 
     /// Query matched via Smith-Waterman local alignment.
     ///
-    /// Alignment matches are produced when using ``MatchingAlgorithm/smithWaterman`` mode.
+    /// Alignment matches are produced when using ``MatchingAlgorithm/smithWaterman(_:)`` mode.
     /// The score is derived from a single DP pass that finds the optimal local alignment
     /// of query characters within the candidate, with bonuses for word boundaries,
     /// camelCase transitions, and consecutive matches.

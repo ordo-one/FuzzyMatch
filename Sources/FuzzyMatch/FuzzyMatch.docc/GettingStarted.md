@@ -97,6 +97,56 @@ for var candidate in candidates {
 
 > Note: This performance gap is a Swift 6.0 limitation. When the library adopts Swift 6.2+ Span, the String API will recover full throughput and this method may be deprecated.
 
+## Highlighting Matched Characters
+
+After scoring, use ``FuzzyMatcher/attributedHighlight(_:against:applying:)-(_,FuzzyQuery,_)`` to get a styled `AttributedString` for UI display. Call this only for results you display — it is separate from the scoring hot path:
+
+```swift
+let matcher = FuzzyMatcher()
+let query = matcher.prepare("mod")
+
+// Score candidates first (high-performance path)
+var buffer = matcher.makeBuffer()
+let candidates = ["format:modern", "modification", "model_data"]
+let matches = candidates.compactMap { c -> (String, ScoredMatch)? in
+    matcher.score(c, against: query, buffer: &buffer).map { (c, $0) }
+}
+
+// Then highlight only the visible results
+for (candidate, _) in matches.prefix(10) {
+    if let text = matcher.attributedHighlight(candidate, against: query, applying: {
+        $0.foregroundColor = .orange
+    }) {
+        // text is an AttributedString with matched chars styled
+    }
+}
+```
+
+On Linux or without SwiftUI, use Foundation-level attributes:
+
+```swift
+if let text = matcher.attributedHighlight("format:modern", against: query, applying: {
+    $0.inlinePresentationIntent = .stronglyEmphasized
+}) {
+    // text has "mod" in bold
+}
+```
+
+Both modes support highlighting. In edit distance mode, highlights include typo positions (substitutions, transpositions). In Smith-Waterman mode, multi-word queries highlight each word independently:
+
+```swift
+let swMatcher = FuzzyMatcher(config: .smithWaterman)
+
+// Multi-word: each atom highlighted independently
+if let text = swMatcher.attributedHighlight("fooXXXbar", against: "foo bar", applying: {
+    $0.foregroundColor = .orange
+}) {
+    // "foo" and "bar" are styled, "XXX" is unstyled
+}
+```
+
+For raw ranges, use ``FuzzyMatcher/highlight(_:against:)-(_,FuzzyQuery)`` which returns `[Range<String.Index>]?`. A convenience overload accepts a raw `String` query for both methods.
+
 ## Understanding Match Kinds
 
 Every successful match includes a ``MatchKind`` that tells you where the query matched:

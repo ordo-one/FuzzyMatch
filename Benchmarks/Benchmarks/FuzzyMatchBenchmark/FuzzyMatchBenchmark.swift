@@ -831,4 +831,66 @@ let benchmarks: @Sendable () -> Void = {
             blackHole(totalMatches)
         }
     }
+
+    // MARK: - Highlight Benchmarks
+
+    Benchmark(
+        "Highlight - ED short candidates",
+        configuration: configKilo
+    ) { benchmark in
+        let smallDataset = DatasetHolder.shared.smallDataset
+        let matcher = FuzzyMatcher()
+        let query = matcher.prepare("getUs")
+
+        for _ in benchmark.scaledIterations {
+            for candidate in smallDataset {
+                blackHole(matcher.highlight(candidate, against: query))
+            }
+        }
+    }
+
+    Benchmark(
+        "Highlight - SW short candidates",
+        configuration: configKilo
+    ) { benchmark in
+        let smallDataset = DatasetHolder.shared.smallDataset
+        let matcher = FuzzyMatcher(config: .smithWaterman)
+        let query = matcher.prepare("getUs")
+
+        for _ in benchmark.scaledIterations {
+            for candidate in smallDataset {
+                blackHole(matcher.highlight(candidate, against: query))
+            }
+        }
+    }
+
+    Benchmark(
+        "Highlight - ED 10 char query",
+        configuration: configKilo
+    ) { benchmark in
+        let smallDataset = DatasetHolder.shared.smallDataset
+        let matcher = FuzzyMatcher()
+        let query = matcher.prepare("getUserByI")
+
+        for _ in benchmark.scaledIterations {
+            for candidate in smallDataset {
+                blackHole(matcher.highlight(candidate, against: query))
+            }
+        }
+    }
+
+    Benchmark(
+        "Highlight - ED long string (32KB)",
+        configuration: configOne
+    ) { benchmark in
+        let longStrings = DatasetHolder.shared.longStrings32KB
+        let matcher = FuzzyMatcher()
+        let query = matcher.prepare("und is")
+
+        for _ in benchmark.scaledIterations {
+            for candidate in longStrings {
+                blackHole(matcher.highlight(candidate, against: query))
+            }
+        }
+    }
 }

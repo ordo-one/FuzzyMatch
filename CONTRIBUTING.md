@@ -26,6 +26,7 @@ Tests use the **Swift Testing** framework (`@Test` macro, `#expect()` assertions
 - `PrefilterTests.swift` / `TrigramTests.swift` — Fast rejection
 - `ScoringBonusTests.swift` / `WordBoundaryTests.swift` — Ranking (edit distance mode)
 - `AcronymMatchTests.swift` — Word-initial abbreviation matching
+- `HighlightTests.swift` — Highlight range extraction for UI display
 - `EdgeCaseTests.swift` — Boundary conditions
 
 Run a specific test suite:

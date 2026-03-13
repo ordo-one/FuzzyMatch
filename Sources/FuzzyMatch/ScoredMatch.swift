@@ -117,8 +117,8 @@ public struct ScoredMatch: Sendable, Hashable, Comparable, Codable, CustomString
 
 /// A matched candidate paired with its score.
 ///
-/// Returned by ``FuzzyMatcher/topMatches(_:against:limit:)`` and
-/// ``FuzzyMatcher/matches(_:against:)``.
+/// Returned by ``FuzzyMatcher/topMatches(_:against:limit:)-(_,FuzzyQuery,_)`` and
+/// ``FuzzyMatcher/matches(_:against:)-(_,FuzzyQuery)``.
 ///
 /// ## Example
 ///

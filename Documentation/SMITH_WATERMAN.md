@@ -14,11 +14,12 @@ This document describes the **Smith-Waterman local alignment** matching mode ava
 8. [Score Normalization](#score-normalization)
 9. [Multi-Word Queries](#multi-word-queries)
 10. [Acronym Fallback](#acronym-fallback)
-11. [Configuration](#configuration)
-12. [Implementation Details](#implementation-details) — Memory Layout, ASCII Fast Path, Multi-Byte Slow Path, Zero-Allocation Design
-13. [Complexity Analysis](#complexity-analysis)
-14. [Worked Examples](#worked-examples)
-15. [References](#references)
+11. [Highlight Traceback](#highlight-traceback)
+12. [Configuration](#configuration)
+13. [Implementation Details](#implementation-details) — Memory Layout, ASCII Fast Path, Multi-Byte Slow Path, Zero-Allocation Design
+14. [Complexity Analysis](#complexity-analysis)
+15. [Worked Examples](#worked-examples)
+16. [References](#references)
 
 ---
 
@@ -414,6 +415,32 @@ Subsequence check: b→b, m→m, s→s ✓
 Coverage: 3/3 = 1.0
 Score: 0.55 + 0.4 × 1.0 = 0.95 → kind = .acronym
 ```
+
+---
+
+## Highlight Traceback
+
+The `highlight(_:against:)` method recovers matched character positions from the Smith-Waterman alignment for UI highlighting. It uses a full-matrix variant of the SW DP (`smithWatermanPositions()`) that retains the complete match, gap, bonus, and trace matrices so positions can be recovered via traceback.
+
+### How It Works
+
+1. **Normalization** — build a `mapping[normalizedByteIndex] = originalByteOffset` array mirroring the merged lowercase + bonus pass
+2. **Full-matrix SW DP** — same three-state recurrence as the scoring DP, but stores all rows (not just the current one) plus traceback flags at each cell
+3. **Traceback** — from the best score at the last query column, trace back through the matrix collecting matched candidate positions
+4. **Multi-word queries** — run one traceback per atom, concatenate position arrays
+5. **Acronym fallback** — if acronym score beats SW score, use word-initial positions instead
+6. **Map to ranges** — convert normalized byte positions through the mapping array to `Range<String.Index>`, coalesce adjacent ranges
+
+### Differences from ED Highlight
+
+| Aspect | ED Highlight | SW Highlight |
+|--------|-------------|-------------|
+| Typo support | Substituted positions highlighted | No — all query chars must exist |
+| Pipeline | Multi-phase fallback chain | Single DP pass |
+| Multi-word | Monolithic alignment | Per-atom traceback |
+| Scoring consistency | Priority-ordered phases | Same DP as scoring |
+
+This method is completely separate from the scoring hot path. The full-matrix DP allocates O(q × c) space, which is acceptable since it runs only for visible results (~10-20 candidates).
 
 ---
 

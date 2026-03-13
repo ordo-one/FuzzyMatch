@@ -248,12 +248,17 @@ internal func lowercaseCyrillic(lead: UInt8, second: UInt8) -> (UInt8, UInt8) {
 /// - Parameters:
 ///   - source: Raw UTF-8 bytes to lowercase.
 ///   - destination: Pre-allocated array to write lowercased bytes into.
+///   - mapping: If non-nil, records `mapping[outIdx] = sourceIdx` for each output byte,
+///     enabling callers to map normalized positions back to original byte offsets.
+///     The buffer must have at least `source.count` elements. Pass `nil` on the hot path;
+///     the compiler dead-code-eliminates all mapping writes when specialized with `nil`.
 ///   - isASCII: If `true`, uses the faster ASCII-only path (no multi-byte dispatch).
 /// - Returns: The number of bytes written to `destination`.
 @inlinable @discardableResult
 internal func lowercaseUTF8(
     from source: UnsafeBufferPointer<UInt8>,
     into destination: inout [UInt8],
+    mapping: UnsafeMutablePointer<Int>?,
     isASCII: Bool
 ) -> Int {
     let count = source.count
@@ -266,6 +271,7 @@ internal func lowercaseUTF8(
         if isASCII {
             for i in 0..<count {
                 dest[i] = confusableASCIIToCanonical(lowercaseASCII(source[i]))
+                mapping?[i] = i
             }
             return count
         } else {
@@ -281,33 +287,43 @@ internal func lowercaseUTF8(
                     let ascii = latin1ToASCII(lowered)
                     if ascii != 0 {
                         dest[outIdx] = ascii
+                        mapping?[outIdx] = i
                         outIdx += 1
                     } else {
                         dest[outIdx] = byte
+                        mapping?[outIdx] = i
                         dest[outIdx + 1] = lowered
+                        mapping?[outIdx + 1] = i
                         outIdx += 2
                     }
                     i += 2
                 } else if (byte == 0xCE || byte == 0xCF) && i + 1 < count {
                     let (newLead, newSecond) = lowercaseGreek(lead: byte, second: source[i + 1])
                     dest[outIdx] = newLead
+                    mapping?[outIdx] = i
                     dest[outIdx + 1] = newSecond
+                    mapping?[outIdx + 1] = i
                     outIdx += 2
                     i += 2
                 } else if (byte == 0xD0 || byte == 0xD1) && i + 1 < count {
                     let (newLead, newSecond) = lowercaseCyrillic(lead: byte, second: source[i + 1])
                     dest[outIdx] = newLead
+                    mapping?[outIdx] = i
                     dest[outIdx + 1] = newSecond
+                    mapping?[outIdx + 1] = i
                     outIdx += 2
                     i += 2
                 } else if (byte == 0xC2 || byte == 0xCA) && i + 1 < count {
                     let ascii = confusable2ByteToASCII(lead: byte, second: source[i + 1])
                     if ascii != 0 {
                         dest[outIdx] = ascii
+                        mapping?[outIdx] = i
                         outIdx += 1
                     } else {
                         dest[outIdx] = byte
+                        mapping?[outIdx] = i
                         dest[outIdx + 1] = source[i + 1]
+                        mapping?[outIdx + 1] = i
                         outIdx += 2
                     }
                     i += 2
@@ -315,16 +331,21 @@ internal func lowercaseUTF8(
                     let ascii = confusable3ByteToASCII(second: source[i + 1], third: source[i + 2])
                     if ascii != 0 {
                         dest[outIdx] = ascii
+                        mapping?[outIdx] = i
                         outIdx += 1
                     } else {
                         dest[outIdx] = byte
+                        mapping?[outIdx] = i
                         dest[outIdx + 1] = source[i + 1]
+                        mapping?[outIdx + 1] = i
                         dest[outIdx + 2] = source[i + 2]
+                        mapping?[outIdx + 2] = i
                         outIdx += 3
                     }
                     i += 3
                 } else {
                     dest[outIdx] = confusableASCIIToCanonical(lowercaseASCII(byte))
+                    mapping?[outIdx] = i
                     outIdx += 1
                     i += 1
                 }

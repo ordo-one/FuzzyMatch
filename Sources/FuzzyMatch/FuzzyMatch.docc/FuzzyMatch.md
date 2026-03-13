@@ -65,6 +65,23 @@ for var candidate in candidates {
 
 > Note: This performance gap is a Swift 6.0 limitation. When the library adopts Swift 6.2+ Span, the String API will recover full throughput.
 
+### Highlighting Matched Characters
+
+After scoring, call `attributedHighlight(_:against:applying:)` on visible results to get a styled `AttributedString` for UI display. This is separate from scoring — call it only for the results you actually display:
+
+```swift
+let matcher = FuzzyMatcher()
+let query = matcher.prepare("mod")
+
+if let text = matcher.attributedHighlight("format:modern", against: query, applying: {
+    $0.foregroundColor = .orange
+}) {
+    // text has "mod" styled in orange
+}
+```
+
+For raw ranges, use `highlight(_:against:)` which returns `[Range<String.Index>]?`. In edit distance mode, highlights handle typos — substituted positions and transpositions are included. In Smith-Waterman mode, multi-word queries highlight each word independently.
+
 ## Topics
 
 ### Essentials

@@ -23,6 +23,7 @@ Full [API documentation](https://swiftpackageindex.com/ordo-one/FuzzyMatch/docum
 - **Word Boundary Bonuses** - Intelligent scoring that rewards matches at camelCase and snake_case boundaries
 - **Subsequence Matching** - Match abbreviations like "gubi" to "getUserById"
 - **Acronym Matching** - Match word-initial abbreviations like "bms" to "Bristol-Myers Squibb"
+- **Highlight Ranges** - Get `[Range<String.Index>]` for matched characters in scored results, with full support for typos, transpositions, and Unicode normalization
 
 ## Installation
 
@@ -235,6 +236,85 @@ await withTaskGroup(of: [ScoredMatch].self) { group in
 }
 ```
 
+### Highlighting Matched Characters
+
+After scoring, use `attributedHighlight()` to get a styled `AttributedString` for UI display. Call it only for visible results (typically ~10-20), not the full corpus:
+
+```swift
+import FuzzyMatch
+import SwiftUI  // or just Foundation on Linux
+
+let matcher = FuzzyMatcher()
+let query = matcher.prepare("mod")
+
+// Returns nil if no match — styled AttributedString otherwise
+if let text = matcher.attributedHighlight("format:modern", against: query, applying: {
+    $0.foregroundColor = .orange  // SwiftUI attribute
+}) {
+    // text has "mod" styled in orange, rest unstyled
+}
+```
+
+On Linux or without SwiftUI, use Foundation-level attributes:
+
+```swift
+if let text = matcher.attributedHighlight("format:modern", against: query, applying: {
+    $0.inlinePresentationIntent = .stronglyEmphasized  // bold
+}) {
+    // text has "mod" in bold
+}
+```
+
+For full control over the raw ranges, use `highlight()` directly:
+
+```swift
+if let ranges = matcher.highlight("format:modern", against: query) {
+    // ranges: [Range<String.Index>] — coalesced and sorted
+    var text = AttributedString("format:modern")
+    for range in ranges {
+        let start = AttributedString.Index(range.lowerBound, within: text)!
+        let end = AttributedString.Index(range.upperBound, within: text)!
+        text[start..<end].foregroundColor = .accentColor
+    }
+}
+```
+
+The returned ranges are coalesced (adjacent matches merged) and sorted. Highlights work with both matching modes and handle:
+
+- **Exact matches** — single range covering the full string
+- **Subsequence matches** — scattered ranges at matched positions (e.g., `["g", "U", "B", "I"]` for "gubi" in "getUserById")
+- **Acronym matches** — word-initial positions (e.g., `["B", "M", "S"]` for "bms" in "Bristol-Myers Squibb")
+- **Unicode normalization** — diacritics (`"café"` highlighted for query `"cafe"`), combining marks, and confusable characters
+
+**Typo-tolerant highlighting (edit distance mode):** When a query contains typos, the highlight shows which candidate characters participated in the alignment — including substituted positions:
+
+```swift
+let matcher = FuzzyMatcher()
+
+// Typo: 'a' instead of 'e' — highlights "getUser" (substituted 'e' included)
+matcher.highlight("getUserById", against: "getusar")   // → ["getUser"]
+
+// Missing character — highlights around the gap
+matcher.highlight("format:modern", against: "modrn")   // → ["mod", "rn"]
+
+// Doubled character — extra char absorbed, highlights normally
+matcher.highlight("getUserById", against: "geetuser")  // → ["getUser"]
+
+// Transposed characters — both positions highlighted
+matcher.highlight("getUserById", against: "gteuser")   // → ["getUser"]
+```
+
+**Smith-Waterman highlighting** uses the same API but runs the SW alignment DP with traceback instead. Multi-word queries highlight each atom independently:
+
+```swift
+let matcher = FuzzyMatcher(config: .smithWaterman)
+
+// Multi-word: both atoms highlighted
+matcher.highlight("fooXXXbar", against: "foo bar")     // → ["foo", "bar"]
+```
+
+> **Performance:** `highlight()` is more expensive than `score()` — it allocates internally and runs a full-matrix DP traceback. Typical cost per call on short candidates (~8-30 characters): ~1.2 μs (ED), ~0.8 μs (SW). Highlighting 20 visible results takes ~24 μs (ED) or ~16 μs (SW).
+
 ### Filtering and Sorting Results
 
 Using the convenience API:
@@ -312,7 +392,7 @@ In Smith-Waterman mode, FuzzyMatch trades typo tolerance for higher throughput a
 |--------|---------|---------|--------|
 | Hit rate | **197/197** | 187/197 | 190/197 |
 | Top-1 agreement with nucleo | 77/197 | **182/197** | — |
-| Throughput | 32M/sec | 66M/sec | 97M/sec |
+| Throughput | 33M/sec | 66M/sec | 97M/sec |
 
 FuzzyMatch (SW) agrees with nucleo on 92% of top-1 rankings (182/197), making it a drop-in replacement for nucleo-style matching in pure Swift with no FFI overhead. The 10 missing queries are typo-heavy inputs that require edit distance to resolve.
 
@@ -345,7 +425,7 @@ Typical performance on Apple Silicon (M4 Max):
 
 ### Comparison Throughput
 
-On a 272K candidate corpus (M4 Max), FuzzyMatcher processes ~32M candidates/sec in edit distance mode and ~66M candidates/sec in Smith-Waterman mode — both comfortably interactive. nucleo (Rust) is faster at ~97M/sec but uses a different language runtime. Perhaps surprisingly, FuzzyMatch is also significantly faster than a naive `lowercased().contains()` baseline (~3M candidates/sec) — fuzzy matching with prefiltering can outperform brute-force substring search while delivering far better results for real-world user input. See [COMPARISON.md](Documentation/COMPARISON.md) for full performance comparison.
+On a 272K candidate corpus (M4 Max), FuzzyMatcher processes ~33M candidates/sec in edit distance mode and ~66M candidates/sec in Smith-Waterman mode — both comfortably interactive. nucleo (Rust) is faster at ~97M/sec but uses a different language runtime. Perhaps surprisingly, FuzzyMatch is also significantly faster than a naive `lowercased().contains()` baseline (~3M candidates/sec) — fuzzy matching with prefiltering can outperform brute-force substring search while delivering far better results for real-world user input. See [COMPARISON.md](Documentation/COMPARISON.md) for full performance comparison.
 
 ### Zero-Allocation Scoring
 
@@ -365,19 +445,17 @@ Measured on Apple Silicon (M4 Max, 16 cores), release build, query `1235321 -sco
 
 | Input size | Wall time | CPU time | CPU utilization |
 |------------|-----------|----------|-----------------|
-| 10M lines | 0.24s | 2.0s | ~830% |
-| 100M lines | 2.4s | 23s | ~960% |
-| 1B lines | 25s | 246s | ~980% |
+| 10M lines | 0.25s | 2.0s | ~800% |
+| 100M lines | 2.5s | 22s | ~890% |
 
 **Smith-Waterman mode:**
 
 | Input size | Wall time | CPU time | CPU utilization |
 |------------|-----------|----------|-----------------|
-| 10M lines | 0.24s | 0.45s | ~190% |
-| 100M lines | 2.5s | 5.1s | ~200% |
-| 1B lines | 26s | 61s | ~230% |
+| 10M lines | 0.29s | 1.0s | ~350% |
+| 100M lines | 3.7s | 24s | ~640% |
 
-Wall times are I/O-bound (single-threaded stdin reader); both modes achieve ~40M lines/sec throughput. The CPU time difference shows Smith-Waterman's ~4x lower per-line matching cost. Memory footprint stays under 200 MB even at 1B lines (14 GB input).
+Wall times are I/O-bound (single-threaded stdin reader); both modes achieve ~40M lines/sec throughput. At 10M lines, Smith-Waterman's ~2x lower per-line matching cost is visible in CPU time; at 100M lines, thread coordination and memory pressure dominate.
 
 ## Fuzz Testing
 
@@ -419,7 +497,7 @@ FuzzyMatcher operates on raw UTF-8 bytes for performance and supports case-insen
 
 The primary corpus and use case has been financial instruments (stock tickers, fund names, ISINs), which are predominantly ASCII and Latin-1. Greek and Cyrillic support is provided as a courtesy for users who need these scripts, but they are not a primary target for the package.
 
-Custom byte-level case folding is used instead of Swift's `String.lowercased()` to avoid per-call allocations and iterator overhead in the hot scoring path. An ASCII fast path (checking `String.isASCII` once per candidate) skips all multi-byte dispatch for the vast majority of candidates, keeping throughput at ~32M candidates/sec even with extended script support.
+Custom byte-level case folding is used instead of Swift's `String.lowercased()` to avoid per-call allocations and iterator overhead in the hot scoring path. An ASCII fast path (checking `String.isASCII` once per candidate) skips all multi-byte dispatch for the vast majority of candidates, keeping throughput at ~33M candidates/sec even with extended script support.
 
 Edit distance and trigrams operate at the byte level. See [DAMERAU_LEVENSHTEIN.md](Documentation/DAMERAU_LEVENSHTEIN.md#unicode-support) for details on what is and isn't supported.
 
@@ -455,7 +533,7 @@ FuzzyMatch offers two matching algorithms:
 | Typo handling | Native transposition support | No transposition operation |
 | Prefix awareness | Explicit prefix scoring | No prefix concept |
 | Multi-word queries | Monolithic | Word-by-word AND semantics |
-| Throughput | ~32M candidates/sec | ~66M candidates/sec |
+| Throughput | ~33M candidates/sec | ~66M candidates/sec |
 
 The **default edit distance mode** is designed for interactive search where users type imprecisely. It handles transposition typos ("Berkhsire" for Berkshire), progressive typing, and short symbol lookups better than any other matcher tested. **Smith-Waterman mode** excels at multi-word product search, offers ~2x higher throughput, and agrees with nucleo on 92% of top-1 rankings.
 
@@ -517,6 +595,14 @@ func topMatches(_ candidates: some Sequence<String>,
 // Convenience: all matches sorted by score
 func matches(_ candidates: some Sequence<String>,
              against query: FuzzyQuery) -> [MatchResult]
+
+// Highlighting: get matched character ranges for UI display
+func highlight(_ candidate: String,
+               against query: FuzzyQuery) -> [Range<String.Index>]?
+
+// Highlighting: convenience overload with raw query string
+func highlight(_ candidate: String,
+               against query: String) -> [Range<String.Index>]?
 ```
 
 ## License
