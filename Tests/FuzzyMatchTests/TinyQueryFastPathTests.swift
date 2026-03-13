@@ -28,7 +28,7 @@ struct TinyQueryFastPathTests {
     ) -> ScoredMatch? {
         var buffer = matcher.makeBuffer()
         buffer.recordUsage(queryLength: query.lowercased.count, candidateLength: candidate.utf8.count)
-        var candidateUTF8 = Array(candidate.utf8)
+        let candidateUTF8 = Array(candidate.utf8)
         return candidateUTF8.withUnsafeBufferPointer { ptr in
             matcher.scoreImpl(
                 ptr,

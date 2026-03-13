@@ -1292,11 +1292,17 @@ func issue16_modaldfc_modalek_highlightsOnlyModal() {
 
 #if canImport(Foundation)
 
+/// Test-only attribute key — portable across all Foundation platforms.
+private enum HighlightMarker: AttributedStringKey {
+    typealias Value = Bool
+    static let name = "testHighlightMarker"
+}
+
 @Test func attributedHighlightBasicMatch() {
     let matcher = FuzzyMatcher()
     let query = matcher.prepare("mod")
     let result = matcher.attributedHighlight("format:modern", against: query) {
-        $0.inlinePresentationIntent = .stronglyEmphasized
+        $0[HighlightMarker.self] = true
     }
     #expect(result != nil, "Should return an AttributedString for a match")
     if let result {
@@ -1305,9 +1311,9 @@ func issue16_modaldfc_modalek_highlightsOnlyModal() {
         for run in result.runs {
             let text = String(result[run.range].characters)
             if text == "mod" {
-                #expect(run.inlinePresentationIntent == .stronglyEmphasized)
+                #expect(run[HighlightMarker.self] == true)
             } else {
-                #expect(run.inlinePresentationIntent != .stronglyEmphasized)
+                #expect(run[HighlightMarker.self] != true)
             }
         }
     }
@@ -1316,7 +1322,7 @@ func issue16_modaldfc_modalek_highlightsOnlyModal() {
 @Test func attributedHighlightNilOnNoMatch() {
     let matcher = FuzzyMatcher()
     let result = matcher.attributedHighlight("abc", against: "xyz") {
-        $0.inlinePresentationIntent = .stronglyEmphasized
+        $0[HighlightMarker.self] = true
     }
     #expect(result == nil)
 }
@@ -1325,13 +1331,13 @@ func issue16_modaldfc_modalek_highlightsOnlyModal() {
     // "modrn" vs "format:modern" — missing 'e' produces two ranges: "mod" + "rn"
     let matcher = FuzzyMatcher()
     let result = matcher.attributedHighlight("format:modern", against: "modrn") {
-        $0.inlinePresentationIntent = .stronglyEmphasized
+        $0[HighlightMarker.self] = true
     }
     #expect(result != nil)
     if let result {
         var styledParts: [String] = []
         for run in result.runs {
-            if run.inlinePresentationIntent == .stronglyEmphasized {
+            if run[HighlightMarker.self] == true {
                 styledParts.append(String(result[run.range].characters))
             }
         }
@@ -1343,7 +1349,7 @@ func issue16_modaldfc_modalek_highlightsOnlyModal() {
     let matcher = FuzzyMatcher()
     let query = matcher.prepare("")
     let result = matcher.attributedHighlight("hello", against: query) {
-        $0.inlinePresentationIntent = .stronglyEmphasized
+        $0[HighlightMarker.self] = true
     }
     // Empty query returns empty ranges from highlight(), which means an unstyled AttributedString
     #expect(result != nil)
@@ -1355,7 +1361,7 @@ func issue16_modaldfc_modalek_highlightsOnlyModal() {
 @Test func attributedHighlightConvenienceOverload() {
     let matcher = FuzzyMatcher()
     let result = matcher.attributedHighlight("getUserById", against: "getuser") {
-        $0.inlinePresentationIntent = .stronglyEmphasized
+        $0[HighlightMarker.self] = true
     }
     #expect(result != nil)
     if let result {
@@ -1365,7 +1371,7 @@ func issue16_modaldfc_modalek_highlightsOnlyModal() {
 
 // MARK: - SwiftUI-specific AttributedString tests (Apple platforms only)
 
-#if canImport(SwiftUI) // SwiftUI implies Foundation
+#if canImport(SwiftUI)
 
 @Test func attributedHighlightSwiftUIForegroundColor() {
     let matcher = FuzzyMatcher()
