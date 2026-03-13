@@ -67,24 +67,20 @@ for var candidate in candidates {
 
 ### Highlighting Matched Characters
 
-After scoring, call `highlight(_:against:)` on visible results to get `[Range<String.Index>]` for UI display. This is separate from scoring — call it only for the results you actually display:
+After scoring, call `attributedHighlight(_:against:applying:)` on visible results to get a styled `AttributedString` for UI display. This is separate from scoring — call it only for the results you actually display:
 
 ```swift
 let matcher = FuzzyMatcher()
 let query = matcher.prepare("mod")
 
-if let ranges = matcher.highlight("format:modern", against: query) {
-    // ranges highlights "mod" in "modern" — use with SwiftUI Text or AttributedString
-    var text = AttributedString("format:modern")
-    for range in ranges {
-        let start = AttributedString.Index(range.lowerBound, within: text)!
-        let end = AttributedString.Index(range.upperBound, within: text)!
-        text[start..<end].foregroundColor = .accentColor
-    }
+if let text = matcher.attributedHighlight("format:modern", against: query, applying: {
+    $0.foregroundColor = .orange
+}) {
+    // text has "mod" styled in orange
 }
 ```
 
-In edit distance mode, highlights handle typos — substituted positions and transpositions are included. In Smith-Waterman mode, multi-word queries highlight each word independently.
+For raw ranges, use `highlight(_:against:)` which returns `[Range<String.Index>]?`. In edit distance mode, highlights handle typos — substituted positions and transpositions are included. In Smith-Waterman mode, multi-word queries highlight each word independently.
 
 ## Topics
 

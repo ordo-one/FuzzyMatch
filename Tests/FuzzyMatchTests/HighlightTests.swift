@@ -11,8 +11,13 @@
 //
 // ===----------------------------------------------------------------------===//
 
+import Foundation
 @testable import FuzzyMatch
 import Testing
+
+#if canImport(SwiftUI)
+import SwiftUI
+#endif
 
 // MARK: - Helpers
 
@@ -1282,3 +1287,121 @@ func issue16_modaldfc_modalek_highlightsOnlyModal() {
         assertRangeInvariants(candidate, ranges: ranges)
     }
 }
+
+// MARK: - AttributedString Convenience API
+
+@Test func attributedHighlightBasicMatch() {
+    let matcher = FuzzyMatcher()
+    let query = matcher.prepare("mod")
+    let result = matcher.attributedHighlight("format:modern", against: query) {
+        $0.inlinePresentationIntent = .stronglyEmphasized
+    }
+    #expect(result != nil, "Should return an AttributedString for a match")
+    if let result {
+        #expect(String(result.characters) == "format:modern")
+        // Verify the styled run covers "mod"
+        for run in result.runs {
+            let text = String(result[run.range].characters)
+            if text == "mod" {
+                #expect(run.inlinePresentationIntent == .stronglyEmphasized)
+            } else {
+                #expect(run.inlinePresentationIntent != .stronglyEmphasized)
+            }
+        }
+    }
+}
+
+@Test func attributedHighlightNilOnNoMatch() {
+    let matcher = FuzzyMatcher()
+    let result = matcher.attributedHighlight("abc", against: "xyz") {
+        $0.inlinePresentationIntent = .stronglyEmphasized
+    }
+    #expect(result == nil)
+}
+
+@Test func attributedHighlightDisjointRanges() {
+    // "modrn" vs "format:modern" — missing 'e' produces two ranges: "mod" + "rn"
+    let matcher = FuzzyMatcher()
+    let result = matcher.attributedHighlight("format:modern", against: "modrn") {
+        $0.inlinePresentationIntent = .stronglyEmphasized
+    }
+    #expect(result != nil)
+    if let result {
+        var styledParts: [String] = []
+        for run in result.runs {
+            if run.inlinePresentationIntent == .stronglyEmphasized {
+                styledParts.append(String(result[run.range].characters))
+            }
+        }
+        #expect(styledParts == ["mod", "rn"])
+    }
+}
+
+@Test func attributedHighlightEmptyQuery() {
+    let matcher = FuzzyMatcher()
+    let query = matcher.prepare("")
+    let result = matcher.attributedHighlight("hello", against: query) {
+        $0.inlinePresentationIntent = .stronglyEmphasized
+    }
+    // Empty query returns empty ranges from highlight(), which means an unstyled AttributedString
+    #expect(result != nil)
+    if let result {
+        #expect(String(result.characters) == "hello")
+    }
+}
+
+@Test func attributedHighlightConvenienceOverload() {
+    let matcher = FuzzyMatcher()
+    let result = matcher.attributedHighlight("getUserById", against: "getuser") {
+        $0.inlinePresentationIntent = .stronglyEmphasized
+    }
+    #expect(result != nil)
+    if let result {
+        #expect(String(result.characters) == "getUserById")
+    }
+}
+
+// MARK: - SwiftUI-specific AttributedString tests (Apple platforms only)
+
+#if canImport(SwiftUI)
+
+@Test func attributedHighlightSwiftUIForegroundColor() {
+    let matcher = FuzzyMatcher()
+    let result = matcher.attributedHighlight("format:modern", against: "mod") {
+        $0.foregroundColor = .orange
+    }
+    #expect(result != nil)
+    if let result {
+        for run in result.runs {
+            let text = String(result[run.range].characters)
+            if text == "mod" {
+                #expect(run.foregroundColor == .orange)
+            } else {
+                #expect(run.foregroundColor == nil)
+            }
+        }
+    }
+}
+
+@Test func attributedHighlightSwiftUIMultipleAttributes() {
+    let matcher = FuzzyMatcher()
+    let result = matcher.attributedHighlight("getUserById", against: "get") {
+        $0.foregroundColor = .red
+        $0.underlineStyle = .single
+    }
+    #expect(result != nil)
+    if let result {
+        for run in result.runs {
+            let text = String(result[run.range].characters)
+            if text == "get" {
+                #expect(run.foregroundColor == .red)
+                #expect(run.underlineStyle == .single)
+            } else {
+                #expect(run.foregroundColor == nil)
+                #expect(run.underlineStyle == nil)
+            }
+        }
+    }
+}
+
+#endif

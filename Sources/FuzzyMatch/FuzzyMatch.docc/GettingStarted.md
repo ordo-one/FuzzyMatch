@@ -99,7 +99,7 @@ for var candidate in candidates {
 
 ## Highlighting Matched Characters
 
-After scoring, use ``FuzzyMatcher/highlight(_:against:)-(_,FuzzyQuery)`` to get the character ranges that matched. Call this only for results you display — it is separate from the scoring hot path:
+After scoring, use ``FuzzyMatcher/attributedHighlight(_:against:applying:)-(_,FuzzyQuery,_)`` to get a styled `AttributedString` for UI display. Call this only for results you display — it is separate from the scoring hot path:
 
 ```swift
 let matcher = FuzzyMatcher()
@@ -114,12 +114,21 @@ let matches = candidates.compactMap { c -> (String, ScoredMatch)? in
 
 // Then highlight only the visible results
 for (candidate, _) in matches.prefix(10) {
-    if let ranges = matcher.highlight(candidate, against: query) {
-        // ranges contains [Range<String.Index>] — use for SwiftUI Text
-        // or NSAttributedString formatting
-        let highlighted = ranges.map { String(candidate[$0]) }
-        print("\(candidate): highlighted \(highlighted)")
+    if let text = matcher.attributedHighlight(candidate, against: query, applying: {
+        $0.foregroundColor = .orange
+    }) {
+        // text is an AttributedString with matched chars styled
     }
+}
+```
+
+On Linux or without SwiftUI, use Foundation-level attributes:
+
+```swift
+if let text = matcher.attributedHighlight("format:modern", against: query, applying: {
+    $0.inlinePresentationIntent = .stronglyEmphasized
+}) {
+    // text has "mod" in bold
 }
 ```
 
@@ -129,12 +138,14 @@ Both modes support highlighting. In edit distance mode, highlights include typo 
 let swMatcher = FuzzyMatcher(config: .smithWaterman)
 
 // Multi-word: each atom highlighted independently
-if let ranges = swMatcher.highlight("fooXXXbar", against: "foo bar") {
-    // ranges: ["foo", "bar"]
+if let text = swMatcher.attributedHighlight("fooXXXbar", against: "foo bar", applying: {
+    $0.foregroundColor = .orange
+}) {
+    // "foo" and "bar" are styled, "XXX" is unstyled
 }
 ```
 
-A convenience overload accepts a raw `String` query: ``FuzzyMatcher/highlight(_:against:)-(_,String)``.
+For raw ranges, use ``FuzzyMatcher/highlight(_:against:)-(_,FuzzyQuery)`` which returns `[Range<String.Index>]?`. A convenience overload accepts a raw `String` query for both methods.
 
 ## Understanding Match Kinds
 

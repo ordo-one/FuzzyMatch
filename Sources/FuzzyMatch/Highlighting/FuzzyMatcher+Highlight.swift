@@ -23,6 +23,9 @@ extension FuzzyMatcher {
     /// into single ranges, and combining diacritical marks (U+0300–U+036F) are
     /// included in the preceding character's range.
     ///
+    /// > Tip: For a higher-level API that returns a styled `AttributedString` directly,
+    /// > see ``attributedHighlight(_:against:applying:)-(_,FuzzyQuery,_)``.
+    ///
     /// ## Matching Behavior
     ///
     /// **Edit distance mode** tries phases in priority order, returning the first

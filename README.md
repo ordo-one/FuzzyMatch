@@ -238,14 +238,38 @@ await withTaskGroup(of: [ScoredMatch].self) { group in
 
 ### Highlighting Matched Characters
 
-After scoring, use `highlight()` to get ranges of matched characters for UI display. Call it only for visible results (typically ~10-20), not the full corpus:
+After scoring, use `attributedHighlight()` to get a styled `AttributedString` for UI display. Call it only for visible results (typically ~10-20), not the full corpus:
 
 ```swift
+import FuzzyMatch
+import SwiftUI  // or just Foundation on Linux
+
 let matcher = FuzzyMatcher()
 let query = matcher.prepare("mod")
 
+// Returns nil if no match — styled AttributedString otherwise
+if let text = matcher.attributedHighlight("format:modern", against: query, applying: {
+    $0.foregroundColor = .orange  // SwiftUI attribute
+}) {
+    // text has "mod" styled in orange, rest unstyled
+}
+```
+
+On Linux or without SwiftUI, use Foundation-level attributes:
+
+```swift
+if let text = matcher.attributedHighlight("format:modern", against: query, applying: {
+    $0.inlinePresentationIntent = .stronglyEmphasized  // bold
+}) {
+    // text has "mod" in bold
+}
+```
+
+For full control over the raw ranges, use `highlight()` directly:
+
+```swift
 if let ranges = matcher.highlight("format:modern", against: query) {
-    // ranges highlights "mod" in "modern" — a single contiguous range
+    // ranges: [Range<String.Index>] — coalesced and sorted
     var text = AttributedString("format:modern")
     for range in ranges {
         let start = AttributedString.Index(range.lowerBound, within: text)!
