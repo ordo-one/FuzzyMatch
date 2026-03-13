@@ -1118,3 +1118,105 @@ private func assertRangeInvariants(
     #expect(texts == ["I", "A", "G"])
     assertRangeInvariants(candidate, ranges: ranges)
 }
+
+// MARK: - User-reported highlight issues (GitHub #16)
+//
+// All candidates use the exact strings from the issue (including ! and " prefixes).
+// minScore: 0.85 with default edit distance configuration.
+
+@Test func issue16_jiangWild_highlightsCorrectWords() {
+    // User expected "Jiang" and "Wild" highlighted, not scattered chars like "Ji"+"an"+"g".
+    let config = MatchConfig(minScore: 0.85)
+    let matcher = FuzzyMatcher(config: config)
+    let candidate = #"!"Jiang Yanggu, Wildcrafter""#
+    let ranges = matcher.highlight(candidate, against: "jiang wild")
+    #expect(ranges != nil, "should match jiang wild")
+    if let ranges {
+        let texts = highlightedText(candidate, ranges: ranges)
+        #expect(texts == ["Jiang", " Wild"], "Expected word-aligned highlights, got \(texts)")
+        assertRangeInvariants(candidate, ranges: ranges)
+    }
+}
+
+@Test func issue16_gold_gopldTypo_matches() {
+    // "gopld" (transposition typo for "gold") against "!Gold" — user reported this works.
+    let config = MatchConfig(minScore: 0.85)
+    let matcher = FuzzyMatcher(config: config)
+    let candidate = "!Gold"
+    let ranges = matcher.highlight(candidate, against: "gopld")
+    #expect(ranges != nil, "!Gold should match gopld")
+    if let ranges {
+        let texts = highlightedText(candidate, ranges: ranges)
+        #expect(texts == ["Gold"], "Expected Gold highlighted, got \(texts)")
+        assertRangeInvariants(candidate, ranges: ranges)
+    }
+}
+
+@Test func issue16_goldhound_gopldTypo_shouldNotBeNil() {
+    // "gopld" against "!Goldhound" — user reported nil but expected "Gold" highlighted.
+    let config = MatchConfig(minScore: 0.85)
+    let matcher = FuzzyMatcher(config: config)
+    let candidate = "!Goldhound"
+    let ranges = matcher.highlight(candidate, against: "gopld")
+    #expect(ranges != nil, "!Goldhound should match gopld — bare !Gold does")
+    if let ranges {
+        let texts = highlightedText(candidate, ranges: ranges)
+        #expect(texts == ["Gold"], "Expected Gold highlighted, got \(texts)")
+        assertRangeInvariants(candidate, ranges: ranges)
+    }
+}
+
+@Test func issue16_goliathPaladin_gopldTypo_shouldNotBeNil() {
+    // "gopld" against !"Goliath Paladin" — user reported nil but expected some plausible highlight.
+    let config = MatchConfig(minScore: 0.85)
+    let matcher = FuzzyMatcher(config: config)
+    let candidate = #"!"Goliath Paladin""#
+    let ranges = matcher.highlight(candidate, against: "gopld")
+    #expect(ranges != nil, #"!"Goliath Paladin" should match gopld"#)
+    if let ranges {
+        assertRangeInvariants(candidate, ranges: ranges)
+    }
+}
+
+@Test func issue16_modaldfc_modalek_highlightsOnlyModal() {
+    // "modalek" against "modaldfc" — user reported "modaldf" highlighted but expected "modal".
+    let config = MatchConfig(minScore: 0.85)
+    let matcher = FuzzyMatcher(config: config)
+    let candidate = "modaldfc"
+    let ranges = matcher.highlight(candidate, against: "modalek")
+    #expect(ranges != nil, "modaldfc should match modalek")
+    if let ranges {
+        let texts = highlightedText(candidate, ranges: ranges)
+        #expect(texts == ["modal"], "Expected modal highlighted, got \(texts)")
+        assertRangeInvariants(candidate, ranges: ranges)
+    }
+}
+
+@Test func issue16_stainedGlass_sainedGlass_matches() {
+    // "sained glass" against "stained-glass" — user reported full highlight ("this is a good thing").
+    let config = MatchConfig(minScore: 0.85)
+    let matcher = FuzzyMatcher(config: config)
+    let candidate = "stained-glass"
+    let ranges = matcher.highlight(candidate, against: "sained glass")
+    #expect(ranges != nil, "stained-glass should match sained glass")
+    if let ranges {
+        let texts = highlightedText(candidate, ranges: ranges)
+        #expect(texts == ["stained-glass"], "Expected full highlight, got \(texts)")
+        assertRangeInvariants(candidate, ranges: ranges)
+    }
+}
+
+@Test func issue16_stainedGlass_sayinedGlass_shouldNotBeNil() {
+    // "sayined glass" against "stained-glass" — user reported nil but expected a match.
+    let config = MatchConfig(minScore: 0.85)
+    let matcher = FuzzyMatcher(config: config)
+    let candidate = "stained-glass"
+    let ranges = matcher.highlight(candidate, against: "sayined glass")
+    #expect(ranges != nil, "stained-glass should match sayined glass")
+    if let ranges {
+        let texts = highlightedText(candidate, ranges: ranges)
+        #expect(texts == ["stained-glass"] || texts == ["s", "ained-glass"],
+                "Expected plausible highlight, got \(texts)")
+        assertRangeInvariants(candidate, ranges: ranges)
+    }
+}
