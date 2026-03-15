@@ -70,6 +70,18 @@ for result in top3 {
 }
 ```
 
+## Try It — Interactive Search App
+
+The `Examples/FuzzySearch/` directory contains a macOS app for exploring how FuzzyMatch works interactively. It loads a 271K financial instrument corpus and live-searches as you type, showing the top 20 results with highlighted matched characters. Switch between Edit Distance and Smith-Waterman algorithms to see how they rank differently, or use File > Open (Cmd+O) to load your own newline-delimited data.
+
+<img width="1012" height="762" alt="FuzzySearch example app" src="https://github.com/user-attachments/assets/e3b056d9-1aac-4f06-8d64-5b9c9aee0f73" />
+
+Open the Xcode project and hit Run:
+
+```bash
+open Examples/FuzzySearch/FuzzySearch.xcodeproj
+```
+
 ## Usage
 
 ### Convenience API
