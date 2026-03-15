@@ -16,19 +16,29 @@ import SwiftUI
 
 @main
 struct FuzzySearchApp: App {
+    @State private var viewModel = SearchViewModel()
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(viewModel: viewModel)
                 .frame(minWidth: 700, minHeight: 500)
         }
         .defaultSize(width: 900, height: 650)
+        .commands {
+            CommandGroup(replacing: .newItem) {
+                Button("Open...") {
+                    viewModel.openFile()
+                }
+                .keyboardShortcut("o")
+            }
+        }
     }
 }
 
 // MARK: - Content View
 
 struct ContentView: View {
-    @State private var viewModel = SearchViewModel()
+    @Bindable var viewModel: SearchViewModel
 
     var body: some View {
         NavigationStack {
@@ -47,9 +57,11 @@ struct ContentView: View {
                     )
                 } else if viewModel.query.isEmpty {
                     ContentUnavailableView(
-                        "Search Instruments",
+                        "Search",
                         systemImage: "magnifyingglass",
-                        description: Text("\(viewModel.corpusSize.formatted()) instruments loaded")
+                        description: Text(
+                            "\(viewModel.corpusSize.formatted()) entries loaded from \(viewModel.dataSourceName)"
+                        )
                     )
                 } else if viewModel.results.isEmpty && viewModel.searchTimeMS != nil {
                     ContentUnavailableView.search(text: viewModel.query)
@@ -60,7 +72,7 @@ struct ContentView: View {
             .navigationTitle("FuzzySearch")
             .searchable(
                 text: $viewModel.query,
-                prompt: "Search \(viewModel.corpusSize.formatted()) instruments..."
+                prompt: "Search \(viewModel.corpusSize.formatted()) entries..."
             )
             .onChange(of: viewModel.query) { _, _ in
                 viewModel.scheduleSearch()
@@ -136,14 +148,16 @@ struct ResultRow: View {
                 Text(result.highlightedName)
                     .font(.body)
 
-                HStack(spacing: 12) {
-                    Label(result.instrument.symbol, systemImage: "tag")
-                    Label(result.instrument.isin, systemImage: "number")
-                    Label(result.instrument.productClass, systemImage: "square.grid.2x2")
+                if !result.instrument.symbol.isEmpty {
+                    HStack(spacing: 12) {
+                        Label(result.instrument.symbol, systemImage: "tag")
+                        Label(result.instrument.isin, systemImage: "number")
+                        Label(result.instrument.productClass, systemImage: "square.grid.2x2")
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
                 }
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
             }
 
             Spacer()

@@ -59,6 +59,7 @@ final class SearchViewModel {
     var corpusSize = 0
     var isLoading = true
     var errorMessage: String?
+    var dataSourceName = "instruments"
     var algorithmChoice: AlgorithmChoice = .editDistance {
         didSet {
             matcher = FuzzyMatcher(config: algorithmChoice.config)
@@ -100,6 +101,7 @@ final class SearchViewModel {
             let url = URL(fileURLWithPath: path)
             if let data = try? String(contentsOf: url, encoding: .utf8) {
                 parseCorpus(data)
+                dataSourceName = url.lastPathComponent
                 isLoading = false
                 return
             }
@@ -122,6 +124,48 @@ final class SearchViewModel {
         }
 
         isLoading = false
+    }
+
+    func openFile() {
+        let panel = NSOpenPanel()
+        panel.title = "Open File"
+        panel.allowedContentTypes = [.plainText]
+        panel.canChooseDirectories = false
+
+        guard panel.runModal() == .OK, let url = panel.url,
+            let data = try? String(contentsOf: url, encoding: .utf8)
+        else {
+            return
+        }
+
+        resetData()
+
+        let lines = data.split(separator: "\n", omittingEmptySubsequences: true)
+        instruments.reserveCapacity(lines.count)
+
+        for (i, line) in lines.enumerated() {
+            instruments.append(
+                Instrument(id: i, symbol: "", name: String(line), isin: "", productClass: ""))
+        }
+
+        candidateNames = instruments.map(\.name)
+        nameToFirstIndex = Dictionary(
+            candidateNames.enumerated().map { ($0.element, $0.offset) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        corpusSize = instruments.count
+        dataSourceName = url.lastPathComponent
+        isLoading = false
+    }
+
+    private func resetData() {
+        instruments = []
+        candidateNames = []
+        nameToFirstIndex = [:]
+        results = []
+        searchTimeMS = nil
+        query = ""
+        errorMessage = nil
     }
 
     private func parseCorpus(_ data: String) {
