@@ -416,7 +416,7 @@ extension FuzzyMatcher {
                 }
 
                 if bestScore >= query.config.minScore {
-                    return ScoredMatch(score: bestScore, kind: bestKind)
+                    return ScoredMatch(score: min(bestScore, 1.0), kind: bestKind)
                 }
 
                 return nil

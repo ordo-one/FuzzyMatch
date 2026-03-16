@@ -37,15 +37,14 @@ struct SearchResult: Identifiable {
 enum AlgorithmChoice: String, CaseIterable, Identifiable {
     case editDistance = "Edit Distance"
     case smithWaterman = "Smith-Waterman"
-
     var id: Self { self }
+}
 
-    var config: MatchConfig {
-        switch self {
-        case .editDistance: .editDistance
-        case .smithWaterman: .smithWaterman
-        }
-    }
+enum GapPenaltyKind: String, CaseIterable, Identifiable {
+    case none = "None"
+    case linear = "Linear"
+    case affine = "Affine"
+    var id: Self { self }
 }
 
 // MARK: - View Model
@@ -53,6 +52,8 @@ enum AlgorithmChoice: String, CaseIterable, Identifiable {
 @MainActor
 @Observable
 final class SearchViewModel {
+    // MARK: - Search State
+
     var query = ""
     var results: [SearchResult] = []
     var searchTimeMS: Double?
@@ -60,18 +61,136 @@ final class SearchViewModel {
     var isLoading = true
     var errorMessage: String?
     var dataSourceName = "instruments"
+
+    // MARK: - UI State
+
+    var showInspector = false
+
+    // MARK: - Algorithm Selection
+
     var algorithmChoice: AlgorithmChoice = .editDistance {
         didSet {
-            matcher = FuzzyMatcher(config: algorithmChoice.config)
-            scheduleSearch()
+            guard !suppressConfigUpdate else { return }
+            configDidChange()
         }
     }
+
+    // MARK: - Shared Configuration
+
+    var minScore: Double = MatchConfig().minScore {
+        didSet {
+            guard !suppressConfigUpdate else { return }
+            configDidChange()
+        }
+    }
+
+    var resultsLimit: Int = 25 {
+        didSet {
+            guard !suppressConfigUpdate else { return }
+            configDidChange()
+        }
+    }
+
+    // MARK: - Edit Distance Configuration
+
+    var edConfig = EditDistanceConfig.default {
+        didSet {
+            guard !suppressConfigUpdate else { return }
+            configDidChange()
+        }
+    }
+
+    // Gap penalty decomposed for UI binding (GapPenalty is an enum with associated values)
+    var gapPenaltyKind: GapPenaltyKind = .affine {
+        didSet {
+            guard !suppressConfigUpdate else { return }
+            configDidChange()
+        }
+    }
+
+    var gapLinearRate: Double = 0.01 {
+        didSet {
+            guard !suppressConfigUpdate else { return }
+            configDidChange()
+        }
+    }
+
+    var gapAffineOpen: Double = 0.03 {
+        didSet {
+            guard !suppressConfigUpdate else { return }
+            configDidChange()
+        }
+    }
+
+    var gapAffineExtend: Double = 0.005 {
+        didSet {
+            guard !suppressConfigUpdate else { return }
+            configDidChange()
+        }
+    }
+
+    // MARK: - Smith-Waterman Configuration
+
+    var swConfig = SmithWatermanConfig.default {
+        didSet {
+            guard !suppressConfigUpdate else { return }
+            configDidChange()
+        }
+    }
+
+    // MARK: - Private
 
     private var instruments: [Instrument] = []
     private var candidateNames: [String] = []
     private var nameToFirstIndex: [String: Int] = [:]
-    private var searchTask: Task<Void, Never>?
     private var matcher = FuzzyMatcher()
+    private var suppressConfigUpdate = false
+    private var searchGeneration = 0
+
+    // MARK: - Configuration Management
+
+    func configDidChange() {
+        let config: MatchConfig
+        switch algorithmChoice {
+        case .editDistance:
+            var ed = edConfig
+            switch gapPenaltyKind {
+            case .none:
+                ed.gapPenalty = .none
+            case .linear:
+                ed.gapPenalty = .linear(perCharacter: gapLinearRate)
+            case .affine:
+                ed.gapPenalty = .affine(open: gapAffineOpen, extend: gapAffineExtend)
+            }
+            config = MatchConfig(minScore: minScore, algorithm: .editDistance(ed))
+        case .smithWaterman:
+            config = MatchConfig(minScore: minScore, algorithm: .smithWaterman(swConfig))
+        }
+        matcher = FuzzyMatcher(config: config)
+        scheduleSearch()
+    }
+
+    func resetToDefaults() {
+        suppressConfigUpdate = true
+        let defaultConfig = MatchConfig()
+        edConfig = .default
+        swConfig = .default
+        minScore = defaultConfig.minScore
+        resultsLimit = 25
+        let defaultGap = EditDistanceConfig.default.gapPenalty
+        switch defaultGap {
+        case .none: gapPenaltyKind = .none
+        case .linear: gapPenaltyKind = .linear
+        case .affine: gapPenaltyKind = .affine
+        }
+        if case .linear(let rate) = defaultGap { gapLinearRate = rate }
+        if case .affine(let open, let extend) = defaultGap {
+            gapAffineOpen = open
+            gapAffineExtend = extend
+        }
+        suppressConfigUpdate = false
+        configDidChange()
+    }
 
     // MARK: - Corpus Loading
 
@@ -199,8 +318,6 @@ final class SearchViewModel {
     // MARK: - Search
 
     func scheduleSearch() {
-        searchTask?.cancel()
-
         let q = query.trimmingCharacters(in: .whitespaces)
         guard !q.isEmpty else {
             results = []
@@ -208,24 +325,25 @@ final class SearchViewModel {
             return
         }
 
+        searchGeneration += 1
+        let generation = searchGeneration
         let matcher = self.matcher
         let candidateNames = self.candidateNames
         let instruments = self.instruments
         let nameToFirstIndex = self.nameToFirstIndex
+        let resultsLimit = self.resultsLimit
 
-        searchTask = Task {
-            try? await Task.sleep(for: .milliseconds(100))
-            guard !Task.isCancelled else { return }
-
+        Task {
             let (newResults, ms) = Self.performSearch(
                 query: q,
                 matcher: matcher,
                 candidateNames: candidateNames,
                 instruments: instruments,
-                nameToFirstIndex: nameToFirstIndex
+                nameToFirstIndex: nameToFirstIndex,
+                resultsLimit: resultsLimit
             )
 
-            guard !Task.isCancelled else { return }
+            guard generation == self.searchGeneration else { return }
             self.results = newResults
             self.searchTimeMS = ms
         }
@@ -236,13 +354,14 @@ final class SearchViewModel {
         matcher: FuzzyMatcher,
         candidateNames: [String],
         instruments: [Instrument],
-        nameToFirstIndex: [String: Int]
+        nameToFirstIndex: [String: Int],
+        resultsLimit: Int
     ) -> ([SearchResult], Double) {
         let clock = ContinuousClock()
         let start = clock.now
 
         let prepared = matcher.prepare(query)
-        let topMatches = matcher.topMatches(candidateNames, against: prepared, limit: 20)
+        let topMatches = matcher.topMatches(candidateNames, against: prepared, limit: resultsLimit)
 
         let elapsed = clock.now - start
         let ms =
