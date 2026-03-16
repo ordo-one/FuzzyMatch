@@ -85,22 +85,31 @@ struct ContentView: View {
             .onChange(of: viewModel.query) { _, _ in
                 viewModel.scheduleSearch()
             }
-            .toolbar(removing: .sidebarToggle)
-            .task {
-                viewModel.loadCorpus()
-            }
-        }
-        .inspector(isPresented: $viewModel.showInspector) {
-            ConfigurationPanel(viewModel: viewModel)
-                .inspectorColumnWidth(min: 200, ideal: 300, max: 400)
-                .toolbar {
-                    Spacer()
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Picker("Algorithm", selection: $viewModel.algorithmChoice) {
+                        ForEach(AlgorithmChoice.allCases) { choice in
+                            Text(choice.rawValue).tag(choice)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .help("Matching algorithm")
+                }
+                ToolbarItem(placement: .primaryAction) {
                     Button {
                         viewModel.showInspector.toggle()
                     } label: {
                         Label("Toggle Inspector", systemImage: "info.circle")
                     }
                 }
+            }
+            .inspector(isPresented: $viewModel.showInspector) {
+                ConfigurationPanel(viewModel: viewModel)
+                    .inspectorColumnWidth(min: 200, ideal: 300, max: 400)
+            }
+            .task {
+                viewModel.loadCorpus()
+            }
         }
     }
 
@@ -128,13 +137,8 @@ struct ContentView: View {
                 )
             }
             Spacer()
-            Picker("Algorithm", selection: $viewModel.algorithmChoice) {
-                ForEach(AlgorithmChoice.allCases) { choice in
-                    Text(choice.rawValue).tag(choice)
-                }
-            }
-            .pickerStyle(.segmented)
-            .fixedSize()
+            Text(viewModel.algorithmChoice.rawValue)
+                .foregroundStyle(.tertiary)
         }
         .font(.caption)
         .foregroundStyle(.secondary)
