@@ -77,7 +77,7 @@ final class SearchViewModel {
 
     // MARK: - Shared Configuration
 
-    var minScore: Double = 0.3 {
+    var minScore: Double = MatchConfig().minScore {
         didSet {
             guard !suppressConfigUpdate else { return }
             configDidChange()
@@ -172,14 +172,22 @@ final class SearchViewModel {
 
     func resetToDefaults() {
         suppressConfigUpdate = true
+        let defaultConfig = MatchConfig()
         edConfig = .default
         swConfig = .default
-        minScore = 0.3
+        minScore = defaultConfig.minScore
         resultsLimit = 25
-        gapPenaltyKind = .affine
-        gapLinearRate = 0.01
-        gapAffineOpen = 0.03
-        gapAffineExtend = 0.005
+        let defaultGap = EditDistanceConfig.default.gapPenalty
+        switch defaultGap {
+        case .none: gapPenaltyKind = .none
+        case .linear: gapPenaltyKind = .linear
+        case .affine: gapPenaltyKind = .affine
+        }
+        if case .linear(let rate) = defaultGap { gapLinearRate = rate }
+        if case .affine(let open, let extend) = defaultGap {
+            gapAffineOpen = open
+            gapAffineExtend = extend
+        }
         suppressConfigUpdate = false
         configDidChange()
     }
