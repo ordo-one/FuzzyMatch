@@ -559,7 +559,7 @@ public struct FuzzyMatcher: Sendable {
                 )
 
                 if state.bestScore >= query.config.minScore {
-                    return ScoredMatch(score: state.bestScore, kind: state.bestKind)
+                    return ScoredMatch(score: min(state.bestScore, 1.0), kind: state.bestKind)
                 }
 
                 return nil
@@ -888,6 +888,8 @@ public struct FuzzyMatcher: Sendable {
             score -= lengthPenalty
         }
 
+        score = min(score, 1.0)
+
         if score > state.bestScore && score >= query.config.minScore {
             state.bestScore = score
             state.bestKind = .substring
@@ -961,7 +963,7 @@ public struct FuzzyMatcher: Sendable {
         guard qi == queryLength else { return }
 
         let coverage = Double(queryLength) / Double(initialCount)
-        let score = (0.55 + 0.4 * coverage) * acronymWeight
+        let score = min((0.55 + 0.4 * coverage) * acronymWeight, 1.0)
         if score > state.bestScore && score >= query.config.minScore {
             state.bestScore = score
             state.bestKind = .acronym

@@ -84,7 +84,7 @@ final class SearchViewModel {
         }
     }
 
-    var resultsLimit: Int = 20 {
+    var resultsLimit: Int = 25 {
         didSet {
             guard !suppressConfigUpdate else { return }
             configDidChange()
@@ -143,9 +143,9 @@ final class SearchViewModel {
     private var instruments: [Instrument] = []
     private var candidateNames: [String] = []
     private var nameToFirstIndex: [String: Int] = [:]
-    private var searchTask: Task<Void, Never>?
     private var matcher = FuzzyMatcher()
     private var suppressConfigUpdate = false
+    private var searchGeneration = 0
 
     // MARK: - Configuration Management
 
@@ -175,7 +175,7 @@ final class SearchViewModel {
         edConfig = .default
         swConfig = .default
         minScore = 0.3
-        resultsLimit = 20
+        resultsLimit = 25
         gapPenaltyKind = .affine
         gapLinearRate = 0.01
         gapAffineOpen = 0.03
@@ -310,8 +310,6 @@ final class SearchViewModel {
     // MARK: - Search
 
     func scheduleSearch() {
-        searchTask?.cancel()
-
         let q = query.trimmingCharacters(in: .whitespaces)
         guard !q.isEmpty else {
             results = []
@@ -319,16 +317,15 @@ final class SearchViewModel {
             return
         }
 
+        searchGeneration += 1
+        let generation = searchGeneration
         let matcher = self.matcher
         let candidateNames = self.candidateNames
         let instruments = self.instruments
         let nameToFirstIndex = self.nameToFirstIndex
         let resultsLimit = self.resultsLimit
 
-        searchTask = Task {
-            try? await Task.sleep(for: .milliseconds(100))
-            guard !Task.isCancelled else { return }
-
+        Task {
             let (newResults, ms) = Self.performSearch(
                 query: q,
                 matcher: matcher,
@@ -338,7 +335,7 @@ final class SearchViewModel {
                 resultsLimit: resultsLimit
             )
 
-            guard !Task.isCancelled else { return }
+            guard generation == self.searchGeneration else { return }
             self.results = newResults
             self.searchTimeMS = ms
         }

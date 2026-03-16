@@ -47,7 +47,6 @@ struct FuzzySearchApp: App {
 
 struct ContentView: View {
     @Bindable var viewModel: SearchViewModel
-
     var body: some View {
         NavigationStack {
             Group {
@@ -103,13 +102,13 @@ struct ContentView: View {
                     }
                 }
             }
-            .inspector(isPresented: $viewModel.showInspector) {
-                ConfigurationPanel(viewModel: viewModel)
-                    .inspectorColumnWidth(min: 200, ideal: 300, max: 400)
-            }
             .task {
                 viewModel.loadCorpus()
             }
+        }
+        .inspector(isPresented: $viewModel.showInspector) {
+            ConfigurationPanel(viewModel: viewModel)
+                .inspectorColumnWidth(min: 200, ideal: 300, max: 400)
         }
     }
 
@@ -172,6 +171,7 @@ struct ConfigurationPanel: View {
             }
         }
         .formStyle(.grouped)
+        .contentMargins(.trailing, 6, for: .scrollContent)
     }
 
     // MARK: General
@@ -185,11 +185,12 @@ struct ConfigurationPanel: View {
                 step: 0.05,
                 format: "%.2f"
             )
-            ParameterStepper(
-                label: "Results Limit",
-                value: $viewModel.resultsLimit,
-                range: 5...100
-            )
+            Picker("Results Limit", selection: $viewModel.resultsLimit) {
+                ForEach([5, 25, 50, 100, 500], id: \.self) { n in
+                    Text("\(n)").tag(n)
+                }
+            }
+            .pickerStyle(.segmented)
         }
     }
 
@@ -451,7 +452,7 @@ struct ResultRow: View {
 
             // Score and match kind
             VStack(alignment: .trailing, spacing: 3) {
-                Text(result.score, format: .percent.precision(.fractionLength(1)))
+                Text(result.score, format: .percent.precision(.fractionLength(2)))
                     .font(.caption.monospacedDigit().bold())
                     .foregroundStyle(.secondary)
 
