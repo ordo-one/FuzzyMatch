@@ -694,18 +694,35 @@ public struct FuzzyMatcher: Sendable {
     ) {
         let queryLength = query.lowercased.count
 
-        // Skip when prefix match is strong or prefix distance is 0
-        // (prefix score with recovery 0.9 always beats substring with 0.8)
-        guard state.bestScore < 0.7 && prefixDistance != 0 else { return }
+        // Skip only when the prefix is exact. For strong near-prefix matches,
+        // keep the fast path unless an exact substring can compete.
+        guard prefixDistance != 0 else { return }
 
-        let substringDist = substringEditDistance(
-            query: querySpan,
-            candidate: candidateSpan,
-            state: &editDistanceState,
-            maxEditDistance: state.effectiveMaxEditDistance
-        )
+        let exactSubstringStart: Int?
+        if state.bestScore >= 0.7 {
+            let contiguousStart = findContiguousSubstring(
+                query: querySpan,
+                candidate: candidateSpan,
+                boundaryMask: state.boundaryMask
+            )
+            guard contiguousStart >= 0 else { return }
+            exactSubstringStart = contiguousStart
+        } else {
+            exactSubstringStart = nil
+        }
 
-        guard let distance = substringDist else { return }
+        let distance: Int
+        if exactSubstringStart != nil {
+            distance = 0
+        } else {
+            guard let substringDist = substringEditDistance(
+                query: querySpan,
+                candidate: candidateSpan,
+                state: &editDistanceState,
+                maxEditDistance: state.effectiveMaxEditDistance
+            ) else { return }
+            distance = substringDist
+        }
 
         // Short query same-length restriction (see scorePrefix for rationale).
         if queryLength <= 3 && distance > 0 && candidateLength != queryLength {
@@ -721,6 +738,30 @@ public struct FuzzyMatcher: Sendable {
 
         // Calculate bonuses using cached or fresh DP-optimal alignment
         if state.needsAlignment {
+            // Prefix scoring may have cached a different near-match alignment.
+            // Exact substrings should use their contiguous occurrence for bonuses
+            // and whole-word recovery.
+            if distance == 0 {
+                let contiguousStart = exactSubstringStart ?? findContiguousSubstring(
+                    query: querySpan,
+                    candidate: candidateSpan,
+                    boundaryMask: state.boundaryMask
+                )
+                if contiguousStart >= 0 {
+                    for i in 0..<queryLength {
+                        matchPositions[i] = contiguousStart + i
+                    }
+                    state.cachedPositionCount = queryLength
+                    state.cachedBonus = calculateBonuses(
+                        matchPositions: matchPositions,
+                        positionCount: queryLength,
+                        candidateBytes: candidateSpan,
+                        boundaryMask: state.boundaryMask,
+                        config: edConfig
+                    )
+                }
+            }
+
             if state.cachedPositionCount < 0 {
                 // For short queries with exact substring, try contiguous recovery
                 if queryLength <= 4 {
@@ -730,25 +771,6 @@ public struct FuzzyMatcher: Sendable {
                         boundaryMask: state.boundaryMask,
                         positions: &matchPositions
                     )
-
-                    // If exact substring exists but greedy found scattered positions,
-                    // scan for a contiguous occurrence (better bonuses + whole-word recovery)
-                    if distance == 0 && positionCount == queryLength {
-                        let firstPos = matchPositions[0]
-                        let lastPos = matchPositions[positionCount - 1]
-                        if lastPos - firstPos + 1 != queryLength {
-                            let contiguousStart = findContiguousSubstring(
-                                query: querySpan,
-                                candidate: candidateSpan,
-                                boundaryMask: state.boundaryMask
-                            )
-                            if contiguousStart >= 0 {
-                                for i in 0..<queryLength {
-                                    matchPositions[i] = contiguousStart + i
-                                }
-                            }
-                        }
-                    }
 
                     state.cachedPositionCount = positionCount
                     state.cachedBonus = positionCount > 0 ? calculateBonuses(
