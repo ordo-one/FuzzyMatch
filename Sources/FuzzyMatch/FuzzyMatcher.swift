@@ -694,27 +694,23 @@ public struct FuzzyMatcher: Sendable {
     ) {
         let queryLength = query.lowercased.count
 
-        // Skip only when the prefix is exact. For strong near-prefix matches,
-        // keep the fast path unless an exact substring can compete.
+        // Skip only when the prefix is exact. Otherwise, first check whether an
+        // exact substring can compete before falling back to fuzzy substring DP.
         guard prefixDistance != 0 else { return }
 
-        let exactSubstringStart: Int?
-        if state.bestScore >= 0.7 {
-            let contiguousStart = findContiguousSubstring(
-                query: querySpan,
-                candidate: candidateSpan,
-                boundaryMask: state.boundaryMask
-            )
-            guard contiguousStart >= 0 else { return }
-            exactSubstringStart = contiguousStart
-        } else {
-            exactSubstringStart = nil
-        }
+        let contiguousStart = findContiguousSubstring(
+            query: querySpan,
+            candidate: candidateSpan,
+            boundaryMask: state.boundaryMask
+        )
 
         let distance: Int
-        if exactSubstringStart != nil {
+        if contiguousStart >= 0 {
             distance = 0
         } else {
+            // Preserve the strong-prefix fast path: only fuzzy-score substrings
+            // when prefix scoring did not already find a good match.
+            guard state.bestScore < 0.7 else { return }
             guard let substringDist = substringEditDistance(
                 query: querySpan,
                 candidate: candidateSpan,
@@ -742,11 +738,6 @@ public struct FuzzyMatcher: Sendable {
             // Exact substrings should use their contiguous occurrence for bonuses
             // and whole-word recovery.
             if distance == 0 {
-                let contiguousStart = exactSubstringStart ?? findContiguousSubstring(
-                    query: querySpan,
-                    candidate: candidateSpan,
-                    boundaryMask: state.boundaryMask
-                )
                 if contiguousStart >= 0 {
                     for i in 0..<queryLength {
                         matchPositions[i] = contiguousStart + i
