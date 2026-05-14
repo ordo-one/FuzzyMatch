@@ -737,20 +737,18 @@ public struct FuzzyMatcher: Sendable {
             // Prefix scoring may have cached a different near-match alignment.
             // Exact substrings should use their contiguous occurrence for bonuses
             // and whole-word recovery.
-            if distance == 0 {
-                if contiguousStart >= 0 {
-                    for i in 0..<queryLength {
-                        matchPositions[i] = contiguousStart + i
-                    }
-                    state.cachedPositionCount = queryLength
-                    state.cachedBonus = calculateBonuses(
-                        matchPositions: matchPositions,
-                        positionCount: queryLength,
-                        candidateBytes: candidateSpan,
-                        boundaryMask: state.boundaryMask,
-                        config: edConfig
-                    )
+            if distance == 0, contiguousStart >= 0 {
+                for i in 0..<queryLength {
+                    matchPositions[i] = contiguousStart + i
                 }
+                state.cachedPositionCount = queryLength
+                state.cachedBonus = calculateBonuses(
+                    matchPositions: matchPositions,
+                    positionCount: queryLength,
+                    candidateBytes: candidateSpan,
+                    boundaryMask: state.boundaryMask,
+                    config: edConfig
+                )
             }
 
             if state.cachedPositionCount < 0 {
