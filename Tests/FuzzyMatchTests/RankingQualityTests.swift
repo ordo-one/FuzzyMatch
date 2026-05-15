@@ -87,6 +87,17 @@ private func assertRanksHigher(
     assertRanksHigher(query: "config", higher: "configuration", lower: "configurable_item")
 }
 
+@Test func exactSubstringRanksAboveNearPrefixMatches() {
+    let results = rank("alpd", against: [
+        "Alpha - Demo One",
+        "Alpine Delta - User",
+        "Alpine Delta - Account (alpd)"
+    ])
+
+    #expect(results.count == 3)
+    #expect(results[0].candidate == "Alpine Delta - Account (alpd)")
+}
+
 // MARK: - Typo Tolerance
 
 @Test func typoUsrMatchesUser() {
