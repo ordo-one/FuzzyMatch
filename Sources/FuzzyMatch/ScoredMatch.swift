@@ -159,3 +159,76 @@ public struct MatchResult: Sendable, Hashable, Comparable, Codable, CustomString
         "MatchResult(candidate: \"\(candidate)\", match: \(match))"
     }
 }
+
+/// A matched item paired with its score, for use with the key-path convenience API.
+///
+/// `ItemMatchResult` is the generic counterpart of ``MatchResult``. Where `MatchResult`
+/// pairs a `String` candidate with its ``ScoredMatch``, `ItemMatchResult` pairs an
+/// arbitrary item with its match result, allowing you to search structured collections
+/// without manually extracting and re-associating strings.
+///
+/// Returned by ``FuzzyMatcher/topMatches(_:by:against:limit:)-3o7g8`` and
+/// ``FuzzyMatcher/matches(_:by:against:)-8skx7``.
+///
+/// ## Example
+///
+/// ```swift
+/// struct Instrument {
+///     let ticker: String
+///     let name: String
+/// }
+///
+/// let instruments = [
+///     Instrument(ticker: "AAPL", name: "Apple Inc"),
+///     Instrument(ticker: "MSFT", name: "Microsoft Corporation"),
+/// ]
+///
+/// let matcher = FuzzyMatcher()
+/// let query = matcher.prepare("apple")
+/// for result in matcher.topMatches(instruments, by: \.name, against: query) {
+///     print("\(result.item.ticker): \(result.match.score)")
+/// }
+/// ```
+public struct ItemMatchResult<Item> {
+    /// The original item that matched.
+    public let item: Item
+
+    /// The match score and kind.
+    public let match: ScoredMatch
+
+    /// Creates a new item match result.
+    ///
+    /// - Parameters:
+    ///   - item: The original item that matched.
+    ///   - match: The scored match containing score and kind.
+    public init(item: Item, match: ScoredMatch) {
+        self.item = item
+        self.match = match
+    }
+}
+
+extension ItemMatchResult: Sendable where Item: Sendable {}
+extension ItemMatchResult: Equatable where Item: Equatable {}
+extension ItemMatchResult: Hashable where Item: Hashable {}
+
+extension ItemMatchResult: Comparable where Item: Equatable {
+    /// Compares two item match results by their scores.
+    ///
+    /// This enables sorting results from lowest to highest score.
+    /// For highest-first sorting, use `>` or `sorted(by: >)`.
+    ///
+    /// - Parameters:
+    ///   - lhs: The left-hand side result.
+    ///   - rhs: The right-hand side result.
+    /// - Returns: `true` if `lhs.match.score < rhs.match.score`.
+    public static func < (lhs: Self, rhs: Self) -> Bool {
+        lhs.match < rhs.match
+    }
+}
+
+extension ItemMatchResult: CustomStringConvertible {
+    /// A textual representation of the item match result.
+    public var description: String {
+        "ItemMatchResult(item: \(item), match: \(match))"
+    }
+}

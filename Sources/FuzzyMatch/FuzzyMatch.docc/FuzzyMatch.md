@@ -108,4 +108,5 @@ For raw ranges, use `highlight(_:against:)` which returns `[Range<String.Index>]
 
 - ``ScoredMatch``
 - ``MatchResult``
+- ``ItemMatchResult``
 - ``MatchKind``
