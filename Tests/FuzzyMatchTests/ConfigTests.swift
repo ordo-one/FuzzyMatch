@@ -587,12 +587,37 @@ import Testing
         firstMatchBonus: 0.2,
         firstMatchBonusRange: 12,
         lengthPenalty: 0.005,
-        acronymWeight: 1.2
+        acronymWeight: 1.2,
+        isSubsequenceMatchingEnabled: false
     )
 
     let data = try encoder.encode(original)
     let decoded = try decoder.decode(EditDistanceConfig.self, from: data)
     #expect(decoded == original)
+}
+
+@Test func editDistanceConfigDecodesLegacyPayloadWithoutSubsequenceKey() throws {
+    // A payload serialized before `isSubsequenceMatchingEnabled` existed must still decode,
+    // falling back to the historical default (`true`).
+    let legacyJSON = """
+    {
+        "maxEditDistance": 2,
+        "longQueryMaxEditDistance": 3,
+        "longQueryThreshold": 13,
+        "prefixWeight": 1.5,
+        "substringWeight": 1.0,
+        "wordBoundaryBonus": 0.1,
+        "consecutiveBonus": 0.05,
+        "gapPenalty": { "type": "affine", "open": 0.03, "extend": 0.005 },
+        "firstMatchBonus": 0.15,
+        "firstMatchBonusRange": 10,
+        "lengthPenalty": 0.003,
+        "acronymWeight": 1.0
+    }
+    """
+    let decoded = try JSONDecoder().decode(EditDistanceConfig.self, from: Data(legacyJSON.utf8))
+    #expect(decoded.isSubsequenceMatchingEnabled == true)
+    #expect(decoded == EditDistanceConfig())
 }
 
 @Test func smithWatermanConfigCodableRoundTrip() throws {

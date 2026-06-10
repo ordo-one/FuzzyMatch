@@ -535,16 +535,18 @@ public struct FuzzyMatcher: Sendable {
                 )
 
                 // Phase 5: Subsequence scoring
-                scoreSubsequence(
-                    querySpan: querySpan,
-                    candidateSpan: candidateSpan,
-                    query: query,
-                    edConfig: edConfig,
-                    candidateLength: actualCandidateLength,
-                    state: &state,
-                    matchPositions: &matchPositions,
-                    alignmentState: &alignmentState
-                )
+                if edConfig.isSubsequenceMatchingEnabled {
+                    scoreSubsequence(
+                        querySpan: querySpan,
+                        candidateSpan: candidateSpan,
+                        query: query,
+                        edConfig: edConfig,
+                        candidateLength: actualCandidateLength,
+                        state: &state,
+                        matchPositions: &matchPositions,
+                        alignmentState: &alignmentState
+                    )
+                }
 
                 // Phase 6: Acronym scoring
                 scoreAcronym(
