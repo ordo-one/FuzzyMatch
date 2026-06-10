@@ -535,7 +535,7 @@ public struct FuzzyMatcher: Sendable {
                 )
 
                 // Phase 5: Subsequence scoring
-                if edConfig.enableSubsequenceMatching {
+                if edConfig.isSubsequenceMatchingEnabled {
                     scoreSubsequence(
                         querySpan: querySpan,
                         candidateSpan: candidateSpan,

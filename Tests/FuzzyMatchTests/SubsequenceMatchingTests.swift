@@ -14,7 +14,7 @@
 @testable import FuzzyMatch
 import Testing
 
-// Verifies `EditDistanceConfig.enableSubsequenceMatching`. With it disabled (alongside
+// Verifies `EditDistanceConfig.isSubsequenceMatchingEnabled`. With it disabled (alongside
 // `maxEditDistance: 0` and `acronymWeight: 0`) the matcher becomes a literal, case- and
 // diacritic-insensitive `contains`: only contiguous occurrences survive.
 
@@ -22,7 +22,7 @@ private func strictContains() -> FuzzyMatcher {
     FuzzyMatcher(config: .init(algorithm: .editDistance(.init(
         maxEditDistance: 0,
         acronymWeight: 0,
-        enableSubsequenceMatching: false
+        isSubsequenceMatchingEnabled: false
     ))))
 }
 
