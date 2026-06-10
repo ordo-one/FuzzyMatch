@@ -238,6 +238,7 @@ public enum GapPenalty: Sendable, Equatable, Codable {
 /// | Favor early matches | Increase `firstMatchBonus` to `0.2` |
 /// | Tight matches only | Use `.affine(open: 0.05, extend: 0.01)` |
 /// | Pure edit distance | Set all bonuses to `0.0`, `gapPenalty: .none` |
+/// | Literal `contains` | `maxEditDistance: 0, acronymWeight: 0, enableSubsequenceMatching: false` |
 ///
 /// ## Gap Penalty Strategies
 ///
@@ -481,6 +482,28 @@ public struct EditDistanceConfig: Sendable, Equatable, Codable {
     /// - `< 1.0`: Reduce acronym match scores
     public var acronymWeight: Double
 
+    /// Whether to fall back to gap-based subsequence matching.
+    ///
+    /// When `true` (default), a query whose characters all appear in order but not
+    /// contiguously (e.g. "usd" in "indUS holDing") still matches, scored by how tightly
+    /// the characters cluster. When `false`, the subsequence phase is skipped entirely, so
+    /// only exact, prefix, and contiguous substring matches survive.
+    ///
+    /// Disable this for *literal* matching where the query must appear as a contiguous run.
+    /// Combined with `maxEditDistance: 0` and `acronymWeight: 0`, it makes the matcher a
+    /// case- and diacritic-insensitive `contains` — a non-`nil` result then means the query
+    /// occurs as a contiguous substring.
+    ///
+    /// ```swift
+    /// // A `contains` predicate that won't match "usd" against "indUS holDing"
+    /// let config = EditDistanceConfig(
+    ///     maxEditDistance: 0,
+    ///     acronymWeight: 0,
+    ///     enableSubsequenceMatching: false
+    /// )
+    /// ```
+    public var enableSubsequenceMatching: Bool
+
     /// The default edit distance configuration.
     public static let `default` = Self()
 
@@ -513,6 +536,7 @@ public struct EditDistanceConfig: Sendable, Equatable, Codable {
     ///   - firstMatchBonusRange: Max position for first-match bonus. Default is `10`.
     ///   - lengthPenalty: Penalty per excess character in the candidate. Default is `0.003`.
     ///   - acronymWeight: Weight for acronym matches. Default is `1.0`.
+    ///   - enableSubsequenceMatching: Whether to fall back to gap-based subsequence matching. Default is `true`.
     ///
     /// ## Example
     ///
@@ -555,7 +579,8 @@ public struct EditDistanceConfig: Sendable, Equatable, Codable {
         firstMatchBonus: Double = 0.15,
         firstMatchBonusRange: Int = 10,
         lengthPenalty: Double = 0.003,
-        acronymWeight: Double = 1.0
+        acronymWeight: Double = 1.0,
+        enableSubsequenceMatching: Bool = true
     ) {
         self.maxEditDistance = maxEditDistance
         self.longQueryMaxEditDistance = longQueryMaxEditDistance
@@ -569,6 +594,7 @@ public struct EditDistanceConfig: Sendable, Equatable, Codable {
         self.firstMatchBonusRange = firstMatchBonusRange
         self.lengthPenalty = lengthPenalty
         self.acronymWeight = acronymWeight
+        self.enableSubsequenceMatching = enableSubsequenceMatching
     }
 }
 
